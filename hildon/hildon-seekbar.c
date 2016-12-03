@@ -75,6 +75,17 @@ static void
 hildon_seekbar_size_request                     (GtkWidget *widget,
                                                  GtkRequisition *event);
 
+static void
+hildon_seekbar_get_preferred_width              (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+
+static void
+hildon_seekbar_get_preferred_height             (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
+
 static void 
 hildon_seekbar_size_allocate                    (GtkWidget *widget,
                                                  GtkAllocation *allocation);
@@ -173,7 +184,8 @@ hildon_seekbar_class_init                       (HildonSeekbarClass *seekbar_cla
 
     g_type_class_add_private (seekbar_class, sizeof (HildonSeekbarPrivate));
 
-    widget_class->size_request          = hildon_seekbar_size_request;
+    widget_class->get_preferred_width   = hildon_seekbar_get_preferred_width;
+    widget_class->get_preferred_height  = hildon_seekbar_get_preferred_height;
     widget_class->size_allocate         = hildon_seekbar_size_allocate;
     widget_class->button_press_event    = hildon_seekbar_button_press_event;
     widget_class->button_release_event  = hildon_seekbar_button_release_event;
@@ -233,9 +245,9 @@ hildon_seekbar_init                             (HildonSeekbar *seekbar)
     GtkRange *range = GTK_RANGE(seekbar);
 
     /* Initialize range widget */
-    range->orientation = GTK_ORIENTATION_HORIZONTAL;
-    range->flippable = TRUE;
-    range->round_digits = MAX_ROUND_DIGITS;
+    gtk_orientable_set_orientation (GTK_ORIENTABLE (range), GTK_ORIENTATION_HORIZONTAL);
+    gtk_range_set_flippable (range, TRUE);
+    gtk_range_set_round_digits (range, MAX_ROUND_DIGITS);
 
     gtk_scale_set_draw_value (GTK_SCALE (seekbar), FALSE);
 }
@@ -249,7 +261,7 @@ static gboolean
 hildon_seekbar_keypress                         (GtkWidget *widget,
                                                  GdkEventKey *event)
 {
-    if (event->keyval == GDK_Up || event->keyval == GDK_Down)
+    if (event->keyval == GDK_KEY_Up || event->keyval == GDK_KEY_Down)
         return FALSE;
 
     return ((GTK_WIDGET_CLASS (parent_class)->key_press_event) (widget, event));
@@ -295,11 +307,11 @@ hildon_seekbar_get_property                     (GObject *object,
     switch (prop_id) {
 
         case PROP_TOTAL_TIME:
-            g_value_set_double (value, range->adjustment->upper);
+            g_value_set_double (value, gtk_adjustment_get_upper (gtk_range_get_adjustment (range)));
             break;
 
         case PROP_POSITION:
-            g_value_set_double (value, range->adjustment->value);
+            g_value_set_double (value, gtk_adjustment_get_value (gtk_range_get_adjustment (range)));
             break;
 
         case PROP_FRACTION:
@@ -340,8 +352,9 @@ hildon_seekbar_get_total_time                   (HildonSeekbar *seekbar)
     GtkWidget *widget;
     widget = GTK_WIDGET (seekbar);
     g_return_val_if_fail (HILDON_IS_SEEKBAR (seekbar), 0);
-    g_return_val_if_fail (GTK_RANGE (widget)->adjustment, 0);
-    return GTK_RANGE (widget)->adjustment->upper;
+    GtkAdjustment* adj = gtk_range_get_adjustment (GTK_RANGE (widget));
+    g_return_val_if_fail (adj, 0);
+    return gtk_adjustment_get_upper (adj);
 }
 
 /**
@@ -366,26 +379,23 @@ hildon_seekbar_set_total_time                   (HildonSeekbar *seekbar,
         return;
     }
 
-    g_return_if_fail (GTK_RANGE (widget)->adjustment);
+    g_return_if_fail (gtk_range_get_adjustment (GTK_RANGE (widget)));
 
-    adj = GTK_RANGE (widget)->adjustment;
-    adj->upper = time;
+    adj = gtk_range_get_adjustment (GTK_RANGE (widget));
+    gtk_adjustment_set_upper (adj, time);
 
     /* Clamp position to total time */
-    if (adj->value > time) {
-        adj->value = time;
+    if (gtk_adjustment_get_value (adj) > time) {
+        gtk_adjustment_set_value (adj, time);
         value_changed = TRUE;
     }
 
     /* Calculate new step value */
-    adj->step_increment = adj->upper / NUM_STEPS;
-    adj->page_increment = adj->step_increment;
-
-    gtk_adjustment_changed (adj);
+    gtk_adjustment_set_step_increment (adj, gtk_adjustment_get_upper (adj) / NUM_STEPS);
+    gtk_adjustment_set_page_increment (adj, gtk_adjustment_get_upper (adj) / NUM_STEPS);
 
     /* Update range widget position/fraction */
     if (value_changed) {
-        gtk_adjustment_value_changed (adj);
         hildon_seekbar_set_fraction(seekbar,
                 MIN (hildon_seekbar_get_fraction (seekbar),
                     time));
@@ -439,14 +449,16 @@ hildon_seekbar_set_fraction                     (HildonSeekbar *seekbar,
 
     range = GTK_RANGE(GTK_WIDGET(seekbar));
 
-    g_return_if_fail (fraction <= range->adjustment->upper &&
-            fraction >= range->adjustment->lower);
+    GtkAdjustment *adj = gtk_range_get_adjustment (range);
+
+    g_return_if_fail (fraction <= gtk_adjustment_get_upper (adj) &&
+            fraction >= gtk_adjustment_get_lower (adj));
 
     /* Set to show stream indicator. */
     g_object_set (G_OBJECT (seekbar), "show-fill-level", TRUE, NULL);
 
-    fraction = CLAMP (fraction, range->adjustment->lower,
-            range->adjustment->upper);
+    fraction = CLAMP (fraction, gtk_adjustment_get_lower (adj),
+            gtk_adjustment_get_upper (adj));
 
 #if defined(MAEMO_GTK) || GTK_CHECK_VERSION(2,11,0)
     /* Update stream position of range widget */
@@ -471,9 +483,9 @@ gint
 hildon_seekbar_get_position                     (HildonSeekbar *seekbar)
 {
     g_return_val_if_fail (HILDON_IS_SEEKBAR(seekbar), 0);
-    g_return_val_if_fail (GTK_RANGE(seekbar)->adjustment, 0);
+    g_return_val_if_fail (gtk_range_get_adjustment (GTK_RANGE(seekbar)), 0);
 
-    return GTK_RANGE (seekbar)->adjustment->value;
+    return gtk_adjustment_get_value (gtk_range_get_adjustment (GTK_RANGE(seekbar)));
 }
 
 /**
@@ -494,22 +506,21 @@ hildon_seekbar_set_position                     (HildonSeekbar *seekbar,
     g_return_if_fail (time >= 0);
     g_return_if_fail (HILDON_IS_SEEKBAR(seekbar));
     range = GTK_RANGE (seekbar);
-    adj = range->adjustment;
+    adj = gtk_range_get_adjustment (range);
     g_return_if_fail (adj);
 
     /* only change value if it is a different int. this allows us to have
        smooth scrolls for small total_times */
-    value = floor (adj->value);
+    value = floor (gtk_adjustment_get_value (adj));
     if (time != value) {
-        value = (time < adj->upper) ? time : adj->upper;
+        value = (time < gtk_adjustment_get_upper (adj)) ? time : gtk_adjustment_get_upper (adj);
 
 #if defined(MAEMO_GTK) || GTK_CHECK_VERSION(2,11,0)
         if (value <= gtk_range_get_fill_level (range)) {
 #else
         if (value) {
 #endif
-            adj->value = value;
-            gtk_adjustment_value_changed (adj);
+            gtk_adjustment_set_value (adj, value);
 
             g_object_notify (G_OBJECT (seekbar), "position");
         }
@@ -531,13 +542,36 @@ hildon_seekbar_size_request                     (GtkWidget *widget,
 
     priv->is_toolbar = parent ? TRUE : FALSE;
 
-    if (GTK_WIDGET_CLASS (parent_class)->size_request)
-        GTK_WIDGET_CLASS (parent_class)->size_request (widget, req);
+    gtk_widget_get_preferred_size (widget, req, 0);
 
     /* Request minimum size, depending on whether the widget is in a
      * toolbar or not */
     req->width = priv->is_toolbar ? TOOL_MINIMUM_WIDTH : MINIMUM_WIDTH;
     req->height = priv->is_toolbar ? TOOL_DEFAULT_HEIGHT : DEFAULT_HEIGHT;
+}
+
+static void
+hildon_seekbar_get_preferred_width (GtkWidget *widget,
+                                    gint      *minimal_width,
+                                    gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_seekbar_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_seekbar_get_preferred_height (GtkWidget *widget,
+                                     gint      *minimal_height,
+                                     gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_seekbar_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
 }
 
 static void 
