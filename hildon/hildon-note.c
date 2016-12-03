@@ -139,8 +139,9 @@ static void
 hildon_note_unrealize                           (GtkWidget *widget);
 
 static void
-hildon_note_size_request                        (GtkWidget      *note,
-                                                 GtkRequisition *req);
+hildon_note_get_preferred_width                 (GtkWidget *note,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
 
 static void
 label_size_request                              (GtkWidget      *label,
@@ -252,8 +253,7 @@ hildon_note_set_property                        (GObject *object,
 
                 if (widget)
                 {
-                    g_object_ref (widget);
-                    gtk_object_sink (GTK_OBJECT (widget));
+                    g_object_ref_sink (G_OBJECT (widget));
                 }
 
                 hildon_note_rebuild (note);
@@ -370,7 +370,7 @@ hildon_note_class_init                          (HildonNoteClass *class)
 #endif /* MAEMO_GTK */
     widget_class->realize       = hildon_note_realize;
     widget_class->unrealize     = hildon_note_unrealize;
-    widget_class->size_request  = hildon_note_size_request;
+    widget_class->get_preferred_width  = hildon_note_get_preferred_width;
 
     /**
      * HildonNote:type:
@@ -455,13 +455,12 @@ hildon_note_init                                (HildonNote *dialog)
     gtk_label_set_justify (GTK_LABEL (priv->label), GTK_JUSTIFY_LEFT);
 
     priv->event_box = gtk_event_box_new ();
+    gtk_widget_set_halign (priv->event_box, 0.5);
+    gtk_widget_set_valign (priv->event_box, 0.5);
     priv->icon = NULL;
     priv->stock_icon = NULL;
     priv->idle_handler = 0;
-    priv->align = gtk_alignment_new (0.5, 0.5, 1.0, 1.0);
-
-    gtk_container_add (GTK_CONTAINER (priv->event_box), priv->align);
-
+    
     gtk_event_box_set_visible_window (GTK_EVENT_BOX (priv->event_box), FALSE);
     gtk_event_box_set_above_child (GTK_EVENT_BOX (priv->event_box), TRUE);
     g_signal_connect (priv->event_box, "button-press-event",
@@ -478,7 +477,7 @@ hildon_note_init                                (HildonNote *dialog)
     g_object_ref_sink (priv->event_box);
     g_object_ref_sink (priv->label);
 
-    gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
+    //gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
     gtk_window_set_modal (GTK_WINDOW (dialog), TRUE);
 
     /* We use special hint to turn the note into information notification. */
@@ -551,36 +550,37 @@ hildon_note_orientation_update (HildonNote *note, GdkScreen *screen)
     gint button_width, padding;
     gboolean portrait = gdk_screen_get_width (screen) < gdk_screen_get_height (screen);
 
-    g_object_ref (dialog->action_area);
-    unpack_widget (dialog->action_area);
+    g_object_ref (gtk_dialog_get_action_area (dialog));
+    unpack_widget (gtk_dialog_get_action_area (dialog));
 
     if (portrait) {
-        parent = dialog->vbox;
+        parent = gtk_dialog_get_content_area (dialog);
         button_width = gdk_screen_get_width (screen) - HILDON_MARGIN_DOUBLE * 2;
         padding = HILDON_MARGIN_DOUBLE;
     } else {
-        parent = gtk_widget_get_parent (dialog->vbox);
+        parent = gtk_widget_get_parent (gtk_dialog_get_content_area (dialog));
         button_width = priv->button_width;
         padding = 0;
     }
 
-    gtk_box_pack_end (GTK_BOX (parent), dialog->action_area,
+    gtk_box_pack_end (GTK_BOX (parent), gtk_dialog_get_action_area (dialog),
                       portrait, TRUE, 0);
-    gtk_box_reorder_child (GTK_BOX (parent), dialog->action_area, 0);
-    gtk_container_foreach (GTK_CONTAINER (dialog->action_area),
+    gtk_box_reorder_child (GTK_BOX (parent), gtk_dialog_get_action_area (dialog), 0);
+    gtk_container_foreach (GTK_CONTAINER (gtk_dialog_get_action_area (dialog)),
                            (GtkCallback) resize_button,
                            GINT_TO_POINTER (button_width));
-    g_object_unref (dialog->action_area);
+    g_object_unref (gtk_dialog_get_action_area (dialog));
     gtk_container_child_set (GTK_CONTAINER (priv->box), priv->label,
                              "padding", padding, NULL);
 }
 
 static void
-hildon_note_size_request                        (GtkWidget      *note,
-                                                 GtkRequisition *req)
+hildon_note_get_preferred_width (GtkWidget *note,
+                                 gint      *minimal_width,
+                                 gint      *natural_width)
 {
-    GTK_WIDGET_CLASS (parent_class)->size_request (note, req);
-    req->width = gdk_screen_get_width (gtk_widget_get_screen (note));
+    GTK_WIDGET_CLASS (parent_class)->get_preferred_width (note, minimal_width, natural_width);
+    *natural_width = gdk_screen_get_width (gtk_widget_get_screen (note));
 }
 
 static void
@@ -617,10 +617,10 @@ hildon_note_realize                             (GtkWidget *widget)
     GTK_WIDGET_CLASS (parent_class)->realize (widget);
 
     /* Border only, no titlebar */
-    gdk_window_set_decorations (widget->window, GDK_DECOR_BORDER);
+    gdk_window_set_decorations (gtk_widget_get_window (widget), GDK_DECOR_BORDER);
 
     /* Set the _HILDON_NOTIFICATION_TYPE property so Matchbox places the window correctly */
-    display = gdk_drawable_get_display (widget->window);
+    display = gdk_window_get_display (gtk_widget_get_window (widget));
     atom = gdk_x11_get_xatom_by_name_for_display (display, "_HILDON_NOTIFICATION_TYPE");
 
     if (priv->note_n == HILDON_NOTE_TYPE_INFORMATION ||
@@ -631,7 +631,7 @@ hildon_note_realize                             (GtkWidget *widget)
         notification_type = "_HILDON_NOTIFICATION_TYPE_CONFIRMATION";
     }
 
-    XChangeProperty (GDK_WINDOW_XDISPLAY (widget->window), GDK_WINDOW_XID (widget->window),
+    XChangeProperty (GDK_WINDOW_XDISPLAY (gtk_widget_get_window (widget)), GDK_WINDOW_XID (gtk_widget_get_window (widget)),
                      atom, XA_STRING, 8, PropModeReplace, (guchar *) notification_type,
                      strlen (notification_type));
 
@@ -667,8 +667,8 @@ unpack_widget                                   (GtkWidget *widget)
 {
     g_assert (widget == NULL || GTK_IS_WIDGET (widget));
 
-    if (widget && widget->parent)
-        gtk_container_remove (GTK_CONTAINER (widget->parent), widget);
+    if (widget && gtk_widget_get_parent (widget))
+        gtk_container_remove (GTK_CONTAINER (gtk_widget_get_parent (widget)), widget);
 }
 
 /*
@@ -712,20 +712,20 @@ hildon_note_set_padding (HildonNote *note)
     switch (priv->note_n) {
     case HILDON_NOTE_TYPE_INFORMATION:
     case HILDON_NOTE_TYPE_INFORMATION_THEME:
-        gtk_dialog_set_padding (GTK_DIALOG (note),
-                                HILDON_MARGIN_DOUBLE,
-                                HILDON_MARGIN_DOUBLE,
-                                0,
-                                0);
+//        gtk_dialog_set_padding (GTK_DIALOG (note),
+//                                HILDON_MARGIN_DOUBLE,
+//                                HILDON_MARGIN_DOUBLE,
+//                                0,
+//                                0);
         break;
 
     case HILDON_NOTE_TYPE_CONFIRMATION:
     case HILDON_NOTE_TYPE_CONFIRMATION_BUTTON:
-        gtk_dialog_set_padding (GTK_DIALOG (note),
-                                HILDON_MARGIN_DOUBLE,
-                                HILDON_MARGIN_DEFAULT,
-                                HILDON_MARGIN_DOUBLE,
-                                HILDON_MARGIN_DOUBLE);
+//        gtk_dialog_set_padding (GTK_DIALOG (note),
+//                                HILDON_MARGIN_DOUBLE,
+//                                HILDON_MARGIN_DEFAULT,
+//                                HILDON_MARGIN_DOUBLE,
+//                                HILDON_MARGIN_DOUBLE);
         break;
 
     default:
@@ -817,32 +817,33 @@ hildon_note_rebuild                             (HildonNote *note)
      * left
      */
     if (is_info_note) {
-        gtk_widget_hide (dialog->action_area);
+        gtk_widget_hide (gtk_dialog_get_action_area (dialog));
     } else {
-        gtk_widget_show (dialog->action_area);
+        gtk_widget_show (gtk_dialog_get_action_area (dialog));
     }
-    gtk_widget_set_no_show_all (dialog->action_area, is_info_note);
+    gtk_widget_set_no_show_all (gtk_dialog_get_action_area (dialog), is_info_note);
 
     /* Pack label vertically. Spacing is only necessary for the progressbar note. */
-    priv->box = gtk_vbox_new (FALSE, 0);
-    gtk_container_add (GTK_CONTAINER (priv->align), priv->box);
+    priv->box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+    gtk_container_add (GTK_CONTAINER (priv->event_box), priv->box);
     gtk_box_pack_start (GTK_BOX (priv->box), priv->label, TRUE, TRUE, 0);
 
     if (priv->progressbar) {
-        gtk_misc_set_alignment (GTK_MISC (priv->label), 0.0, 0.5);
-        gtk_alignment_set_padding (GTK_ALIGNMENT (priv->align),
-                                   HILDON_MARGIN_DOUBLE, 0, 0, 0);
+        gtk_widget_set_halign(priv->label, GTK_ALIGN_START);
+        gtk_widget_set_valign(priv->label, GTK_ALIGN_FILL);
+        gtk_widget_set_margin_top (priv->event_box, HILDON_MARGIN_DOUBLE);
         gtk_box_pack_start (GTK_BOX (priv->box), priv->progressbar, FALSE, FALSE, 0);
     } else {
-        gtk_misc_set_alignment (GTK_MISC (priv->label), 0.5, 0.5);
-        gtk_alignment_set_padding (GTK_ALIGNMENT (priv->align), 0, 0, 0, 0);
+        gtk_widget_set_halign(priv->label, GTK_ALIGN_FILL);
+        gtk_widget_set_valign(priv->label, GTK_ALIGN_FILL);
+        gtk_widget_set_margin_top (priv->event_box, 0);
     }
 
 #ifdef MAEMO_GTK
     hildon_note_set_padding (note);
 #endif /* MAEMO_GTK */
 
-    gtk_container_add (GTK_CONTAINER (dialog->vbox), priv->event_box);
+    gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area (dialog)), priv->event_box);
 
     gtk_widget_show_all (priv->event_box);
 }
@@ -854,7 +855,7 @@ hildon_note_rebuild                             (HildonNote *note)
  *   important so that the window manager could handle the windows
  *   correctly.
  *   In GTK the X window ID can be checked using
- *   GDK_WINDOW_XID(GTK_WIDGET(parent)->window).
+ *   GDK_WINDOW_XID(gtk_widget_get_window (GTK_WIDGET (parent))).
  * @description: the message to confirm
  * @Varargs: arguments pairs for new buttons(label and return value). 
  *   Terminate the list with %NULL value.
@@ -924,7 +925,7 @@ hildon_note_new_confirmation_add_buttons        (GtkWindow *parent,
  *   has to be the same as the X window ID of the application. This is
  *   important so that the window manager could handle the windows
  *   correctly. In GTK the X window ID can be checked using
- *   GDK_WINDOW_XID(GTK_WIDGET(parent)->window).
+ *   GDK_WINDOW_XID(gtk_widget_get_window (GTK_WIDGET (parent))).
  * @description: the message to confirm.
  *
  * Create a new confirmation note. Confirmation note has a text (description)
@@ -988,7 +989,7 @@ hildon_note_new_confirmation_with_icon_name     (GtkWindow *parent,
  *   has to be the same as the X window ID of the application. This is
  *   important so that the window manager could handle the windows
  *   correctly. In GTK the X window ID can be checked using
- *   GDK_WINDOW_XID(GTK_WIDGET(parent)->window).
+ *   GDK_WINDOW_XID(gtk_widget_get_window (GTK_WIDGET (parent))).
  * @description: the message to confirm.
  * 
  * Create a new information note. Information note has text (a description)
@@ -1055,7 +1056,7 @@ hildon_note_new_information_with_icon_name      (GtkWindow * parent,
  *   has to be the same as the X window ID of the application. This is
  *   important so that the window manager could handle the windows
  *   correctly. In GTK the X window ID can be checked using
- *   GDK_WINDOW_XID(GTK_WIDGET(parent)->window).
+ *   GDK_WINDOW_XID(gtk_widget_get_window (GTK_WIDGET (parent))).
  * @description: the action to cancel.
  * @progressbar: a pointer to #GtkProgressBar to be filled with the
  *   progressbar assigned to this note. Use this to set the fraction of
