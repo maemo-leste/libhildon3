@@ -189,12 +189,12 @@ hildon_app_menu_insert                          (HildonAppMenu *menu,
 
     /* Force widget size */
     hildon_gtk_widget_set_theme_size (GTK_WIDGET (item),
-                                      HILDON_SIZE_FINGER_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
+                                      HILDON_SIZE_FINGER_HEIGHT);
 
     /* Add the item to the menu */
     g_object_ref_sink (item);
     priv->buttons = g_list_insert (priv->buttons, item, position);
-    if (GTK_WIDGET_VISIBLE (item))
+    if (gtk_widget_get_visible (GTK_WIDGET (item)))
         hildon_app_menu_repack_items (menu, position);
 
     /* Enable accelerators */
@@ -304,7 +304,7 @@ hildon_app_menu_add_filter                      (HildonAppMenu *menu,
     /* Add the filter to the menu */
     g_object_ref_sink (filter);
     priv->filters = g_list_append (priv->filters, filter);
-    if (GTK_WIDGET_VISIBLE (filter))
+    if (gtk_widget_get_visible (GTK_WIDGET (filter)))
         hildon_app_menu_repack_filters (menu);
 
     /* Enable accelerators */
@@ -379,7 +379,7 @@ hildon_app_menu_set_parent_window              (HildonAppMenu *self,
 
     priv->parent_window = parent_window;
 
-    if (parent_window == NULL && GTK_WIDGET_VISIBLE (self))
+    if (parent_window == NULL && gtk_widget_get_visible (GTK_WIDGET (self)))
         gtk_widget_hide (GTK_WIDGET (self));
 }
 
@@ -413,7 +413,7 @@ can_activate_accel                              (GtkWidget *widget,
                                                  guint      signal_id,
                                                  gpointer   user_data)
 {
-    return GTK_WIDGET_VISIBLE (widget);
+    return gtk_widget_get_visible (widget);
 }
 
 static void
@@ -508,13 +508,13 @@ hildon_app_menu_find_intruder                   (gpointer data)
         gboolean intruder_found = FALSE;
         GdkScreen *screen = gtk_widget_get_screen (widget);
         GList *stack = gdk_screen_get_window_stack (screen);
-        GList *parent_pos = g_list_find (stack, GTK_WIDGET (priv->parent_window)->window);
+        GList *parent_pos = g_list_find (stack, gtk_widget_get_window (GTK_WIDGET (priv->parent_window)));
         GList *toplevels = gtk_window_list_toplevels ();
         GList *i;
 
         for (i = toplevels; i != NULL && !intruder_found; i = i->next) {
             if (i->data != widget && i->data != priv->parent_window) {
-                if (g_list_find (parent_pos, GTK_WIDGET (i->data)->window)) {
+                if (g_list_find (parent_pos, gtk_widget_get_window (GTK_WIDGET (i->data)))) {
                     /* HildonBanners are not closed automatically when
                      * a new window appears, so we must close them by
                      * hand to make the AppMenu work as expected.
@@ -559,7 +559,7 @@ hildon_app_menu_grab_notify                     (GtkWidget *widget,
     if (GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->grab_notify)
         GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->grab_notify (widget, was_grabbed);
 
-    if (!was_grabbed && GTK_WIDGET_VISIBLE (widget))
+    if (!was_grabbed && gtk_widget_get_visible (widget))
         gtk_widget_hide (widget);
 }
 
@@ -640,14 +640,13 @@ hildon_app_menu_delete_event_handler            (GtkWidget   *widget,
 }
 
 static void
-hildon_app_menu_size_request                    (GtkWidget      *widget,
-                                                 GtkRequisition *requisition)
+hildon_app_menu_get_preferred_width             (GtkWidget   *widget,
+                                                 gint        *minimal_width,
+                                                 gint        *natural_width)
 {
     HildonAppMenuPrivate *priv = HILDON_APP_MENU_GET_PRIVATE (widget);
 
-    GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->size_request (widget, requisition);
-
-    requisition->width = priv->width_request;
+    *minimal_width = *natural_width = priv->width_request;
 }
 
 static void
@@ -660,14 +659,14 @@ hildon_app_menu_realize                         (GtkWidget *widget)
 
     GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->realize (widget);
 
-    gdk_window_set_decorations (widget->window, GDK_DECOR_BORDER);
+    gdk_window_set_decorations (gtk_widget_get_window (widget), GDK_DECOR_BORDER);
 
-    gdkdisplay = gdk_drawable_get_display (widget->window);
-    xdisplay = GDK_WINDOW_XDISPLAY (widget->window);
+    gdkdisplay = gdk_window_get_display (gtk_widget_get_window (widget));
+    xdisplay = GDK_WINDOW_XDISPLAY (gtk_widget_get_window (widget));
 
     property = gdk_x11_get_xatom_by_name_for_display (gdkdisplay, "_NET_WM_WINDOW_TYPE");
     window_type = XInternAtom (xdisplay, "_HILDON_WM_WINDOW_TYPE_APP_MENU", False);
-    XChangeProperty (xdisplay, GDK_WINDOW_XID (widget->window), property,
+    XChangeProperty (xdisplay, GDK_WINDOW_XID (gtk_widget_get_window (widget)), property,
                      XA_ATOM, 32, PropModeReplace, (guchar *) &window_type, 1);
 
     /* Detect any screen changes */
@@ -709,8 +708,8 @@ hildon_app_menu_apply_style                     (GtkWidget *widget)
                           NULL);
 
     /* Set spacings */
-    gtk_table_set_row_spacings (priv->table, vertical_spacing);
-    gtk_table_set_col_spacings (priv->table, horizontal_spacing);
+    gtk_grid_set_row_spacing (priv->grid, vertical_spacing);
+    gtk_grid_set_column_spacing (priv->grid, vertical_spacing);
     gtk_box_set_spacing (priv->vbox, filter_vertical_spacing);
 
     /* Set inner border */
@@ -726,19 +725,18 @@ hildon_app_menu_apply_style                     (GtkWidget *widget)
     }
     priv->width_request = gdk_screen_get_width (screen) - external_border * 2;
 
-    if (widget->window)
-      gdk_window_move_resize (widget->window,
+    if (gtk_widget_get_window (widget))
+      gdk_window_move_resize (gtk_widget_get_window (widget),
                               external_border, 0, 1, 1);
 
     gtk_widget_queue_resize (widget);
 }
 
 static void
-hildon_app_menu_style_set                       (GtkWidget *widget,
-                                                 GtkStyle  *previous_style)
+hildon_app_menu_style_updated                   (GtkWidget *widget)
 {
-    if (GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->style_set)
-        GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->style_set (widget, previous_style);
+    if (GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->style_updated)
+        GTK_WIDGET_CLASS (hildon_app_menu_parent_class)->style_updated (widget);
 
     hildon_app_menu_apply_style (widget);
 }
@@ -760,7 +758,7 @@ hildon_app_menu_repack_filters                  (HildonAppMenu *menu)
 
     for (iter = priv->filters; iter != NULL; iter = iter->next) {
         GtkWidget *filter = GTK_WIDGET (iter->data);
-        if (GTK_WIDGET_VISIBLE (filter)) {
+        if (gtk_widget_get_visible (filter)) {
             gtk_box_pack_start (GTK_BOX (priv->filters_hbox), filter, TRUE, TRUE, 0);
             g_object_unref (filter);
             /* GtkButton must be realized for accelerators to work */
@@ -787,7 +785,7 @@ hildon_app_menu_repack_items                    (HildonAppMenu *menu,
     i = nvisible = 0;
     for (iter = priv->buttons; iter != NULL; iter = iter->next) {
         /* Count number of visible items */
-        if (GTK_WIDGET_VISIBLE (iter->data))
+        if (gtk_widget_get_visible (iter->data))
             nvisible++;
         /* Remove buttons from their parent */
         if (start_from != -1 && i >= start_from) {
@@ -805,24 +803,20 @@ hildon_app_menu_repack_items                    (HildonAppMenu *menu,
     if (start_from != -1)
         gtk_window_resize (GTK_WINDOW (menu), 1, 1);
 
-    /* Set the final size now to avoid unnecessary resizes later */
-    if (nvisible > 0)
-        gtk_table_resize (priv->table, ((nvisible - 1) / priv->columns) + 1, priv->columns);
-
     /* Add buttons */
-    row = col = 0;
+    row = col = 1;
     for (iter = priv->buttons; iter != NULL; iter = iter->next) {
         GtkWidget *item = GTK_WIDGET (iter->data);
-        if (GTK_WIDGET_VISIBLE (item)) {
-            /* Don't add an item to the table if it's already there */
+        if (gtk_widget_get_visible (item)) {
+            /* Don't add an item to the grid if it's already there */
             if (gtk_widget_get_parent (item) == NULL) {
-                gtk_table_attach_defaults (priv->table, item, col, col + 1, row, row + 1);
+                gtk_grid_attach (priv->grid, item, col, row, 1, 1);
                 g_object_unref (item);
                 /* GtkButton must be realized for accelerators to work */
                 gtk_widget_realize (item);
             }
-            if (++col == priv->columns) {
-                col = 0;
+            if (++col == priv->columns+1) {
+                col = 1;
                 row++;
             }
         }
@@ -854,10 +848,10 @@ hildon_app_menu_has_visible_children (HildonAppMenu *menu)
 
     /* Don't show menu if it doesn't contain visible items */
     for (i = priv->buttons; i && !show_menu; i = i->next)
-        show_menu = GTK_WIDGET_VISIBLE (i->data);
+        show_menu = gtk_widget_get_visible (i->data);
 
     for (i = priv->filters; i && !show_menu; i = i->next)
-	    show_menu = GTK_WIDGET_VISIBLE (i->data);
+	    show_menu = gtk_widget_get_visible (i->data);
 
     return show_menu;
 }
@@ -937,7 +931,6 @@ hildon_app_menu_get_filters                     (HildonAppMenu *menu)
 static void
 hildon_app_menu_init                            (HildonAppMenu *menu)
 {
-    GtkWidget *alignment;
     HildonAppMenuPrivate *priv = HILDON_APP_MENU_GET_PRIVATE(menu);
 
     /* Initialize private variables */
@@ -953,23 +946,26 @@ hildon_app_menu_init                            (HildonAppMenu *menu)
     priv->find_intruder_idle_id = 0;
     priv->hide_idle_id = 0;
 
-    /* Create boxes and tables */
-    priv->filters_hbox = GTK_BOX (gtk_hbox_new (TRUE, 0));
-    priv->vbox = GTK_BOX (gtk_vbox_new (FALSE, 0));
-    priv->table = GTK_TABLE (gtk_table_new (1, priv->columns, TRUE));
+    /* Create boxes and grids */
+    priv->filters_hbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0));
+    gtk_box_set_homogeneous (GTK_BOX (priv->filters_hbox), TRUE);
+    priv->vbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 0));
+    priv->grid = GTK_GRID (gtk_grid_new ());
+    //gtk_grid_set_row_homogeneous (priv->grid, TRUE);
+    gtk_grid_set_column_homogeneous (priv->grid, TRUE);
 
     /* Align the filters to the center */
-    alignment = gtk_alignment_new (0.5, 0.5, 0, 0);
-    gtk_container_add (GTK_CONTAINER (alignment), GTK_WIDGET (priv->filters_hbox));
+    gtk_widget_set_halign(GTK_WIDGET(priv->filters_hbox), GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(GTK_WIDGET(priv->filters_hbox), GTK_ALIGN_CENTER);
 
     /* Pack everything */
     gtk_container_add (GTK_CONTAINER (menu), GTK_WIDGET (priv->vbox));
-    gtk_box_pack_start (priv->vbox, alignment, TRUE, TRUE, 0);
-    gtk_box_pack_start (priv->vbox, GTK_WIDGET (priv->table), TRUE, TRUE, 0);
+    gtk_box_pack_start (priv->vbox, GTK_WIDGET (priv->filters_hbox), TRUE, TRUE, 0);
+    gtk_box_pack_start (priv->vbox, GTK_WIDGET (priv->grid), TRUE, TRUE, 0);
 
     /* This should be treated like a normal, ref-counted widget */
     g_object_force_floating (G_OBJECT (menu));
-    GTK_WINDOW (menu)->has_user_ref_count = FALSE;
+    gtk_window_set_has_user_ref_count (GTK_WINDOW (menu), FALSE);
 
     gtk_widget_show_all (GTK_WIDGET (priv->vbox));
 }
@@ -1044,9 +1040,9 @@ hildon_app_menu_class_init                      (HildonAppMenuClass *klass)
     widget_class->unrealize = hildon_app_menu_unrealize;
     widget_class->grab_notify = hildon_app_menu_grab_notify;
     widget_class->key_press_event = hildon_app_menu_key_press;
-    widget_class->style_set = hildon_app_menu_style_set;
+    widget_class->style_updated = hildon_app_menu_style_updated;
     widget_class->delete_event = hildon_app_menu_delete_event_handler;
-    widget_class->size_request = hildon_app_menu_size_request;
+    widget_class->get_preferred_width = hildon_app_menu_get_preferred_width;
 
     g_type_class_add_private (klass, sizeof (HildonAppMenuPrivate));
 
