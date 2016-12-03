@@ -1,4 +1,4 @@
-AC_INIT([Hildon gtk widgets], [2.2.24], [hildon-devel@garage.maemo.org], [hildon])
+AC_INIT([Hildon gtk widgets], [3.0.0], [hildon-devel@garage.maemo.org], [hildon])
 AC_CANONICAL_SYSTEM
 
 AM_CONFIG_HEADER(config.h)
@@ -10,7 +10,7 @@ AM_MAINTAINER_MODE
 AS_VERSION
 
 #define API_VERSION_MAJOR
-API_VERSION_MAJOR=1
+API_VERSION_MAJOR=3
 AC_SUBST(API_VERSION_MAJOR)
 
 # set the libtool versioning
@@ -36,9 +36,9 @@ AC_PROG_AWK
 
 AC_HEADER_STDC
 
-GTK_VERSION=2.14.3
+GTK_VERSION=3.14
 
-PKG_CHECK_MODULES(GTK, gtk+-2.0 >= $GTK_VERSION)
+PKG_CHECK_MODULES(GTK, gtk+-3.0 >= $GTK_VERSION)
 AC_SUBST(GTK_LIBS)
 AC_SUBST(GTK_CFLAGS)
 AC_SUBST(GTK_VERSION)
