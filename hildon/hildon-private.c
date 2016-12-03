@@ -50,7 +50,7 @@ hildon_private_composite_focus                  (GtkWidget *widget,
 
   toplevel = gtk_widget_get_toplevel (widget);
 
-  focus_widget = GTK_WINDOW (toplevel)->focus_widget;
+  focus_widget = gtk_window_get_focus(GTK_WINDOW (toplevel));
 
   if (focus_widget == NULL || gtk_widget_is_ancestor (focus_widget, widget) == FALSE)
     {
@@ -129,7 +129,7 @@ hildon_gtk_window_set_clear_window_flag                           (GtkWindow   *
                                                                    Atom         xatom,
                                                                    gboolean     flag)
 {
-    GdkWindow *gdkwin = GTK_WIDGET (window)->window;
+    GdkWindow *gdkwin = gtk_widget_get_window (GTK_WIDGET (window))	;
     GdkAtom atom = gdk_atom_intern (atomname, FALSE);
 
     if (flag) {
@@ -147,7 +147,7 @@ hildon_gtk_window_set_flag                                        (GtkWindow    
                                                                    gpointer        userdata)
 {
      g_return_if_fail (GTK_IS_WINDOW (window));
-     if (GTK_WIDGET_REALIZED (window)) {
+     if (gtk_widget_get_realized (GTK_WIDGET (window))) {
         (*func) (window, userdata);
      } else {
          g_signal_handlers_disconnect_matched (window, G_SIGNAL_MATCH_FUNC,
