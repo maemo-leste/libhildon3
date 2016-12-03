@@ -120,7 +120,7 @@ main                                            (int    argc,
     hildon_gtk_init (&argc, &argv);
 
     window = hildon_window_new ();
-    vbox = gtk_vbox_new (FALSE, 0);
+    vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     panarea = hildon_pannable_area_new ();
 
     treeview = create_tree_view ();

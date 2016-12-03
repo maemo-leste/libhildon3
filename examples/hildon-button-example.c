@@ -39,7 +39,7 @@ button_clicked_cb                               (HildonButton *button,
 static GtkWidget *
 create_image                                    (void)
 {
-    return gtk_image_new_from_stock (GTK_STOCK_INFO, GTK_ICON_SIZE_BUTTON);
+    return gtk_image_new_from_icon_name ("dialog-information", GTK_ICON_SIZE_BUTTON);
 }
 
 static void
@@ -67,10 +67,10 @@ vertical_buttons_window                         (GtkButton *b,
     use_images = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (images));
 
     /* Create and pack boxes */
-    hbox = GTK_BOX (gtk_hbox_new (FALSE, 10));
-    vbox1 = GTK_BOX (gtk_vbox_new (FALSE, 10));
-    vbox2 = GTK_BOX (gtk_vbox_new (FALSE, 10));
-    vbox3 = GTK_BOX (gtk_vbox_new (FALSE, 10));
+    hbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10));
+    vbox1 = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
+    vbox2 = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
+    vbox3 = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
 
     gtk_box_pack_start (hbox, GTK_WIDGET (vbox1), TRUE, TRUE, 0);
     gtk_box_pack_start (hbox, GTK_WIDGET (vbox2), TRUE, TRUE, 0);
@@ -153,11 +153,11 @@ horizontal_buttons_window                       (GtkButton *b,
     use_images = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (images));
 
     /* Create and pack boxes */
-    vbox = GTK_BOX (gtk_vbox_new (FALSE, 10));
-    hbox1 = GTK_BOX (gtk_hbox_new (FALSE, 10));
-    hbox2 = GTK_BOX (gtk_hbox_new (FALSE, 10));
-    hbox3 = GTK_BOX (gtk_hbox_new (FALSE, 10));
-    hbox4 = GTK_BOX (gtk_hbox_new (FALSE, 10));
+    vbox =  GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
+    hbox1 = GTK_BOX (gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10));
+    hbox2 = GTK_BOX (gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10));
+    hbox3 = GTK_BOX (gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10));
+    hbox4 = GTK_BOX (gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10));
 
     gtk_box_pack_start (vbox, gtk_label_new ("(all buttons have finger height)"), FALSE, FALSE, 0);
     gtk_box_pack_start (vbox, GTK_WIDGET (hbox1), FALSE, FALSE, 0);
@@ -247,7 +247,7 @@ common_buttons_window                           (GtkButton *b,
     gtk_container_set_border_width (GTK_CONTAINER (win), 20);
 
     panarea = hildon_pannable_area_new ();
-    vbox = GTK_BOX (gtk_vbox_new (FALSE, 10));
+    vbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
 
     /* Single centered title */
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
@@ -260,7 +260,12 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_VERTICAL,
                                           "Left-aligned title", NULL);
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_START);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 0.0, 0.5);
+#endif
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
@@ -268,11 +273,16 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_VERTICAL,
                                           "Right-aligned title", NULL);
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_END);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 1.0, 0.5);
+#endif
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
     /* Centered title and value */
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
@@ -287,7 +297,12 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_VERTICAL,
                                           "Left-aligned title", "Left-aligned value");
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_START);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 0.0, 0.5);
+#endif
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
@@ -295,13 +310,18 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_VERTICAL,
                                           "Right-aligned title", "Right-aligned value");
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_END);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 1.0, 0.5);
+#endif
     hildon_button_set_title_alignment (HILDON_BUTTON (button), 1.0, 0.5);
     hildon_button_set_value_alignment (HILDON_BUTTON (button), 1.0, 0.5);
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
     /* Left-aligned title and value (with image) */
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
@@ -325,7 +345,7 @@ common_buttons_window                           (GtkButton *b,
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
     /* Centered title and value (horizontal) */
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
@@ -342,7 +362,7 @@ common_buttons_window                           (GtkButton *b,
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
     /* Centered title and value (horizontal) */
     centered = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
@@ -363,7 +383,7 @@ common_buttons_window                           (GtkButton *b,
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
     /* Left-aligned title and value (horizontal) */
     title1 = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
@@ -371,7 +391,12 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL,
                                           "Left-aligned title", "Left-aligned value");
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_START);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 0.0, 0.5);
+#endif
     hildon_button_add_size_groups (HILDON_BUTTON (button), title1, value1, NULL);
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
@@ -380,12 +405,17 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL,
                                           "Left-aligned title (2)", "Left-aligned value (2)");
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_START);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 0.0, 0.5);
+#endif
     hildon_button_add_size_groups (HILDON_BUTTON (button), title1, value1, NULL);
     gtk_box_pack_start (vbox, button, FALSE, FALSE, 0);
     g_signal_connect (button, "clicked", G_CALLBACK (button_clicked_cb), NULL);
 
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
     /* Right-aligned title and value (horizontal) */
     title2 = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
@@ -393,7 +423,12 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL,
                                           "Right-aligned title", "Right-aligned value");
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_END);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 1.0, 0.5);
+#endif
     hildon_button_set_title_alignment (HILDON_BUTTON (button), 1.0, 0.5);
     hildon_button_set_value_alignment (HILDON_BUTTON (button), 1.0, 0.5);
     hildon_button_add_size_groups (HILDON_BUTTON (button), title2, value2, NULL);
@@ -404,7 +439,12 @@ common_buttons_window                           (GtkButton *b,
     button = hildon_button_new_with_text (HILDON_SIZE_AUTO_WIDTH |
                                           HILDON_SIZE_FINGER_HEIGHT, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL,
                                           "Right-aligned title (2)", "Right-aligned value (2)");
+#if GTK_CHECK_VERSION (3,14,0)
+    gtk_widget_set_halign (button, GTK_ALIGN_FILL);
+    gtk_widget_set_halign (gtk_bin_get_child (GTK_BIN (button)), GTK_ALIGN_END);
+#else
     gtk_button_set_alignment (GTK_BUTTON (button), 1.0, 0.5);
+#endif
     hildon_button_set_title_alignment (HILDON_BUTTON (button), 1.0, 0.5);
     hildon_button_set_value_alignment (HILDON_BUTTON (button), 1.0, 0.5);
     hildon_button_add_size_groups (HILDON_BUTTON (button), title2, value2, NULL);
@@ -435,12 +475,12 @@ main                                            (int    argc,
     GtkWidget *label;
     GtkBox *vbox;
     GtkBox *hbox;
-    GtkWidget *align;
 
     hildon_gtk_init (&argc, &argv);
 
-    vbox = GTK_BOX (gtk_vbox_new (FALSE, 10));
-    hbox = GTK_BOX (gtk_hbox_new (TRUE, 10));
+    vbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
+    hbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 10));
+    gtk_box_set_homogeneous (GTK_BOX (hbox), TRUE);
 
     win = hildon_stackable_window_new ();
 
@@ -453,15 +493,14 @@ main                                            (int    argc,
     images = gtk_check_button_new_with_label ("Use images");
     gtk_box_pack_start (hbox, horizontal_layout, TRUE, TRUE, 0);
     gtk_box_pack_start (hbox, images, TRUE, TRUE, 0);
-    align = gtk_alignment_new (0.5, 0.5, 0, 0);
-    gtk_container_add (GTK_CONTAINER (align), GTK_WIDGET (hbox));
-
+    gtk_widget_set_halign(GTK_WIDGET(hbox), GTK_ALIGN_CENTER);
+    
     gtk_box_pack_start (vbox, label, TRUE, TRUE, 0);
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
     gtk_box_pack_start (vbox, but1, TRUE, TRUE, 0);
     gtk_box_pack_start (vbox, but2, TRUE, TRUE, 0);
-    gtk_box_pack_start (vbox, align, FALSE, FALSE, 0);
-    gtk_box_pack_start (vbox, gtk_hseparator_new (), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, GTK_WIDGET(hbox), FALSE, FALSE, 0);
+    gtk_box_pack_start (vbox, gtk_separator_new (GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
     gtk_box_pack_start (vbox, but3, TRUE, TRUE, 0);
 
     gtk_container_set_border_width (GTK_CONTAINER (win), 20);

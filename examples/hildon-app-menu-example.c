@@ -50,7 +50,7 @@ create_menu                                     (GtkWidget     *label,
     g_signal_connect_after (button, "clicked", G_CALLBACK (menu_button_clicked), label);
     hildon_app_menu_append (menu, GTK_BUTTON (button));
 
-    gtk_widget_add_accelerator (button, "activate", accel, GDK_r, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+    gtk_widget_add_accelerator (button, "activate", accel, GDK_KEY_r, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
 
     button = hildon_gtk_button_new (buttonsize);
     gtk_button_set_label (GTK_BUTTON (button), "Menu command two");
@@ -112,7 +112,7 @@ main                                            (int argc,
     gtk_label_set_justify (GTK_LABEL (label), GTK_JUSTIFY_CENTER);
     gtk_label_set_justify (GTK_LABEL (label2), GTK_JUSTIFY_CENTER);
 
-    vbox = GTK_BOX (gtk_vbox_new (FALSE, 10));
+    vbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
     win = hildon_stackable_window_new ();
 
     menu = create_menu (label2, accel);

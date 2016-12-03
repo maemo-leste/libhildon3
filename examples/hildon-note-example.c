@@ -42,7 +42,7 @@ on_information_clicked                          (GtkWidget *widget, gpointer dat
     i = gtk_dialog_run (GTK_DIALOG (note));
     if (i == GTK_RESPONSE_DELETE_EVENT)
       g_debug ("%s: GTK_RESPONSE_DELETE_EVENT", __FUNCTION__);
-    gtk_object_destroy (GTK_OBJECT (note));
+    gtk_widget_destroy (GTK_WIDGET (note));
     
     return TRUE;
 }
@@ -57,7 +57,7 @@ on_confirmation_clicked                         (GtkWidget *widget, gpointer dat
 
     gtk_window_set_transient_for (GTK_WINDOW(note), GTK_WINDOW(window));
     i = gtk_dialog_run (GTK_DIALOG (note));
-    gtk_object_destroy (GTK_OBJECT (note));
+    gtk_widget_destroy (GTK_WIDGET (note));
     
     if (i == GTK_RESPONSE_OK)
         g_debug ("Button 'OK' pressed");
@@ -84,7 +84,7 @@ on_progress_clicked                             (GtkWidget *widget, gpointer dat
       g_debug ("%s: GTK_RESPONSE_DELETE_EVENT", __FUNCTION__);
     else
       g_debug ("Button 'Cancel' pressed");
-    gtk_object_destroy (GTK_OBJECT (note));
+    gtk_widget_destroy (GTK_WIDGET (note));
 
     return TRUE;
 }
@@ -102,7 +102,7 @@ main                                            (int argc,
 
     gtk_container_set_border_width (GTK_CONTAINER (window), 6);
 
-    GtkVBox *vbox = GTK_VBOX (gtk_vbox_new (6, FALSE));
+    GtkBox *vbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 6));
     GtkButton *button1 = GTK_BUTTON (gtk_button_new_with_label ("Information note"));
     g_signal_connect (G_OBJECT (button1), "clicked", G_CALLBACK (on_information_clicked), window);
 

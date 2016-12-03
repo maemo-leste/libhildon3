@@ -25,6 +25,7 @@
 #include                                        <stdio.h>
 #include                                        <stdlib.h>
 #include                                        <glib.h>
+#include                                        <glib/gi18n.h>
 #include                                        <gtk/gtk.h>
 #include                                        <hildon/hildon.h>
 
@@ -42,15 +43,15 @@ main                                            (int argc,
     GtkMenu *menu = GTK_MENU (gtk_menu_new ());
     GtkAccelGroup *group = gtk_accel_group_new ();
     gtk_menu_set_accel_group (menu, group);
-    GtkWidget *menu_item = gtk_image_menu_item_new_from_stock (GTK_STOCK_QUIT,
-		    					       gtk_menu_get_accel_group (menu));
+    GtkWidget *menu_item = gtk_menu_item_new_with_mnemonic (_("_Quit"));
+    gtk_widget_add_accelerator (menu_item, "activate", group, GDK_KEY_q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
     gtk_widget_show (menu_item);
     gtk_menu_shell_append (GTK_MENU_SHELL (menu), menu_item);
 
     hildon_window_set_main_menu (HILDON_WINDOW (window), menu);
 
     g_signal_connect_swapped (menu_item, "activate",
-		    	      G_CALLBACK (gtk_object_destroy), window);
+		    	      G_CALLBACK (gtk_widget_destroy), window);
 
     g_signal_connect (G_OBJECT (window), "destroy", G_CALLBACK (gtk_main_quit), NULL);
     gtk_widget_show_all (GTK_WIDGET (window));
