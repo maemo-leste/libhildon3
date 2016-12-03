@@ -149,8 +149,8 @@ hildon_banner_get_property                      (GObject *object,
                                                  GParamSpec *pspec);
 
 static void
-hildon_banner_destroy                           (GtkObject *object);
-        
+hildon_banner_destroy                           (GtkWidget *object);
+
 static GObject*
 hildon_banner_real_get_instance                 (GObject *window, 
                                                  gboolean timed);
@@ -220,7 +220,6 @@ typedef struct                                  _HildonBannerPrivate HildonBanne
 struct                                          _HildonBannerPrivate
 {
     GtkWidget   *main_item;
-    GtkWidget   *alignment;
     GtkWidget   *label;
     GtkWidget   *layout;
     GtkWindow   *parent;
@@ -274,10 +273,10 @@ simulate_close (GtkWidget* widget)
        we simulate clicking the close button of the window.
        This allows applications to reuse the banner by prevent
        closing it etc */
-    if (GTK_WIDGET_DRAWABLE (widget))
+    if (gtk_widget_is_drawable (widget))
     {
         GdkEvent *event = gdk_event_new (GDK_DELETE);
-        event->any.window = g_object_ref (widget->window);
+        event->any.window = g_object_ref (gtk_widget_get_window (widget));
         event->any.send_event = FALSE;
         result = gtk_widget_event (widget, event);
         gdk_event_free (event);
@@ -287,11 +286,12 @@ simulate_close (GtkWidget* widget)
 }
 
 static void
-hildon_banner_size_request                      (GtkWidget      *self,
-                                                 GtkRequisition *req)
+hildon_banner_get_preferred_width               (GtkWidget *self,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
 {
-    GTK_WIDGET_CLASS (hildon_banner_parent_class)->size_request (self, req);
-    req->width = gdk_screen_get_width (gtk_widget_get_screen (self));
+    GTK_WIDGET_CLASS (hildon_banner_parent_class)->get_preferred_width (self, minimal_width, natural_width);
+    *natural_width = gdk_screen_get_width (gtk_widget_get_screen (self));
 }
 
 static gboolean 
@@ -419,7 +419,7 @@ hildon_banner_get_property                      (GObject *object,
 }
 
 static void
-hildon_banner_destroy                           (GtkObject *object)
+hildon_banner_destroy                           (GtkWidget *object)
 {
     HildonBannerPrivate *priv = HILDON_BANNER_GET_PRIVATE (object);
     g_assert (priv);
@@ -447,8 +447,8 @@ hildon_banner_destroy                           (GtkObject *object)
 
     (void) hildon_banner_clear_timeout (self);
 
-    if (GTK_OBJECT_CLASS (hildon_banner_parent_class)->destroy)
-        GTK_OBJECT_CLASS (hildon_banner_parent_class)->destroy (object);
+    if (GTK_WIDGET_CLASS (hildon_banner_parent_class)->destroy)
+        GTK_WIDGET_CLASS (hildon_banner_parent_class)->destroy (object);
 }
 
 /* Search a previous banner instance */
@@ -698,15 +698,15 @@ hildon_banner_realize                           (GtkWidget *widget)
     HildonBannerPrivate *priv = HILDON_BANNER_GET_PRIVATE (widget);
     g_assert (priv);
 
-    /* We let the parent to init widget->window before we need it */
+    /* We let the parent to init gtk_widget_get_window (widget) before we need it */
     if (GTK_WIDGET_CLASS (hildon_banner_parent_class)->realize)
         GTK_WIDGET_CLASS (hildon_banner_parent_class)->realize (widget);
 
     /* We use special hint to turn the banner into information notification. */
-    gdk_window_set_type_hint (widget->window, GDK_WINDOW_TYPE_HINT_NOTIFICATION);
+    gdk_window_set_type_hint (gtk_widget_get_window (widget), GDK_WINDOW_TYPE_HINT_NOTIFICATION);
     gtk_window_set_transient_for (GTK_WINDOW (widget), (GtkWindow *) priv->parent);
 
-    gdkwin = widget->window;
+    gdkwin = gtk_widget_get_window (widget);
 
     /* Set the _HILDON_NOTIFICATION_TYPE property so Matchbox places the window correctly */
     atom = gdk_atom_intern ("_HILDON_NOTIFICATION_TYPE", FALSE);
@@ -824,17 +824,23 @@ hildon_banner_init                              (HildonBanner *self)
     priv->main_item = NULL;
 
     /* Initialize the common layout inside banner */
-    priv->alignment = gtk_alignment_new (0.5, 0.5, 0, 0);
-    priv->layout = gtk_hbox_new (FALSE, HILDON_MARGIN_DEFAULT);
+    priv->layout = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, HILDON_MARGIN_DEFAULT);
+    gtk_widget_set_halign (GTK_WIDGET (priv->layout), GTK_ALIGN_CENTER);
+    gtk_widget_set_valign (GTK_WIDGET (priv->layout), GTK_ALIGN_CENTER);
 
     priv->label = g_object_new (GTK_TYPE_LABEL, NULL);
     gtk_label_set_line_wrap (GTK_LABEL (priv->label), TRUE);
     gtk_label_set_line_wrap_mode (GTK_LABEL (priv->label), PANGO_WRAP_WORD_CHAR);
     gtk_label_set_justify (GTK_LABEL (priv->label), GTK_JUSTIFY_CENTER);
 
+    /* If the label has been wrapped and exceeds 3 lines, we truncate
+     * the rest of the label according to spec.
+     */
+    gtk_label_set_ellipsize (GTK_LABEL (priv->label), PANGO_ELLIPSIZE_END);
+    gtk_label_set_lines (GTK_LABEL (priv->label), 3);
+
     gtk_container_set_border_width (GTK_CONTAINER (priv->layout), HILDON_MARGIN_DEFAULT);
-    gtk_container_add (GTK_CONTAINER (self), priv->alignment);
-    gtk_container_add (GTK_CONTAINER (priv->alignment), priv->layout);
+    gtk_container_add (GTK_CONTAINER (self), priv->layout);
     g_object_ref (priv->label);
     gtk_box_pack_start (GTK_BOX (priv->layout), priv->label, FALSE, FALSE, 0);
 
@@ -947,7 +953,7 @@ hildon_banner_set_override_flag                 (HildonBanner *banner)
 {
     guint32 state = 1;
 
-    gdk_property_change (GTK_WIDGET (banner)->window,
+    gdk_property_change (gtk_widget_get_window (GTK_WIDGET (banner)),
                          gdk_atom_intern_static_string ("_HILDON_DO_NOT_DISTURB_OVERRIDE"),
                          gdk_x11_xatom_to_atom (XA_INTEGER),
                          32,
@@ -1272,7 +1278,7 @@ hildon_banner_set_text                          (HildonBanner *self,
 
     banner_do_set_text (self, text, FALSE);
 
-    if (GTK_WIDGET_VISIBLE (self))
+    if (gtk_widget_get_visible (GTK_WIDGET (self)))
         reshow_banner (self);
 }
 
@@ -1292,7 +1298,7 @@ hildon_banner_set_markup                        (HildonBanner *self,
 
     banner_do_set_text (self, markup, TRUE);
 
-    if (GTK_WIDGET_VISIBLE (self))
+    if (gtk_widget_get_visible (GTK_WIDGET (self)))
         reshow_banner (self);
 }
 
