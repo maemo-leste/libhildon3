@@ -369,7 +369,7 @@ hildon_date_selector_init (HildonDateSelector * selector)
 {
   selector->priv = HILDON_DATE_SELECTOR_GET_PRIVATE (selector);
 
-  GTK_WIDGET_SET_FLAGS (GTK_WIDGET (selector), GTK_NO_WINDOW);
+  gtk_widget_set_has_window (GTK_WIDGET (selector), FALSE);
   gtk_widget_set_redraw_on_allocate (GTK_WIDGET (selector), FALSE);
 
   hildon_touch_selector_set_print_func (HILDON_TOUCH_SELECTOR (selector),
