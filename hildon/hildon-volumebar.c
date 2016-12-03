@@ -68,7 +68,7 @@ hildon_child_forall                             (GtkContainer * container,
                                                  gpointer callback_data);
 
 static void 
-hildon_volumebar_destroy                        (GtkObject *self);
+hildon_volumebar_destroy                        (GtkWidget *self);
 
 static void 
 hildon_volumebar_set_property                   (GObject* object,
@@ -166,7 +166,7 @@ static void
 hildon_volumebar_class_init                     (HildonVolumebarClass *volumebar_class)
 {
     GObjectClass      *gobject_class    = G_OBJECT_CLASS  (volumebar_class);
-    GtkObjectClass    *object_class     = GTK_OBJECT_CLASS (volumebar_class);
+    //GtkObjectClass    *object_class     = GTK_OBJECT_CLASS (volumebar_class);
     GtkWidgetClass    *widget_class     = GTK_WIDGET_CLASS (volumebar_class);
     GtkContainerClass *container_class  = GTK_CONTAINER_CLASS (volumebar_class);
 
@@ -188,11 +188,11 @@ hildon_volumebar_class_init                     (HildonVolumebarClass *volumebar
    widget_class->grab_focus             = hildon_volumebar_grab_focus;
    widget_class->focus                  = hildon_volumebar_focus;
    widget_class->key_press_event        = hildon_volumebar_key_press;
-   object_class->destroy                = hildon_volumebar_destroy;
+   widget_class->destroy                = hildon_volumebar_destroy;
 
    signals[MUTE_TOGGLED_SIGNAL] = g_signal_new ("mute_toggled",
-           G_OBJECT_CLASS_TYPE
-           (object_class),
+           G_TYPE_FROM_CLASS
+           (gobject_class),
            G_SIGNAL_RUN_LAST |
            G_SIGNAL_ACTION,
            G_STRUCT_OFFSET
@@ -202,8 +202,8 @@ hildon_volumebar_class_init                     (HildonVolumebarClass *volumebar
            G_TYPE_NONE, 0);
 
    signals[LEVEL_CHANGED_SIGNAL] = g_signal_new ("level_changed",
-           G_OBJECT_CLASS_TYPE
-           (object_class),
+           G_TYPE_FROM_CLASS
+           (gobject_class),
            G_SIGNAL_RUN_LAST |
            G_SIGNAL_ACTION,
            G_STRUCT_OFFSET
@@ -269,8 +269,8 @@ hildon_volumebar_init                           (HildonVolumebar *volumebar)
 
     /* Should set GTK_NO_WINDOW flag, because widget is derived from
        GtkContainer */
-    GTK_WIDGET_SET_FLAGS (GTK_WIDGET (volumebar), GTK_NO_WINDOW);
-    GTK_WIDGET_SET_FLAGS (GTK_WIDGET (volumebar), GTK_CAN_FOCUS);
+    gtk_widget_set_has_window (GTK_WIDGET (volumebar), FALSE);
+    gtk_widget_set_can_focus (GTK_WIDGET (volumebar), TRUE);
 
     /* Initialize mute button */
     priv->tbutton = GTK_TOGGLE_BUTTON (gtk_toggle_button_new ());
@@ -289,7 +289,7 @@ hildon_volumebar_size_allocate                  (GtkWidget *widget,
     if (GTK_WIDGET_CLASS (parent_class)->size_allocate)
         GTK_WIDGET_CLASS (parent_class)->size_allocate (widget, allocation);
 
-    if (GTK_WIDGET_REALIZED (widget))
+    if (gtk_widget_get_realized (widget))
         gdk_window_move_resize (priv->event_window,
                 allocation->x, allocation->y,
                 allocation->width, allocation->height);
@@ -307,17 +307,20 @@ hildon_volumebar_realize                        (GtkWidget *widget)
 
     GTK_WIDGET_CLASS (parent_class)->realize (widget);
 
+    GtkAllocation allocation;
+    gtk_widget_get_allocation (widget, &allocation);
+
     attributes.window_type = GDK_WINDOW_CHILD;
-    attributes.x = widget->allocation.x;
-    attributes.y = widget->allocation.y;
-    attributes.width = widget->allocation.width;
-    attributes.height = widget->allocation.height;
+    attributes.x = allocation.x;
+    attributes.y = allocation.y;
+    attributes.width = allocation.width;
+    attributes.height = allocation.height;
     attributes.wclass = GDK_INPUT_ONLY;
     attributes.event_mask = GDK_BUTTON_PRESS_MASK;
 
     attributes_mask = GDK_WA_X | GDK_WA_Y;
 
-    priv->event_window = gdk_window_new (widget->window,
+    priv->event_window = gdk_window_new (gtk_widget_get_window(widget),
             &attributes, attributes_mask);
 
     gdk_window_set_user_data (priv->event_window, widget);
@@ -352,7 +355,7 @@ hildon_volumebar_map                            (GtkWidget *widget)
 
     /* the event window must be on top of all other widget windows, so show it
      * last */
-    if (! GTK_WIDGET_SENSITIVE (widget))
+    if (! gtk_widget_get_sensitive (widget))
         gdk_window_show (priv->event_window);
 }
 
@@ -377,7 +380,7 @@ hildon_volumebar_grab_focus                     (GtkWidget *widget)
     priv = HILDON_VOLUMEBAR_GET_PRIVATE (widget);
     g_assert (priv);
 
-    if (GTK_WIDGET_CAN_FOCUS (widget)) {
+    if (gtk_widget_get_can_focus (widget)) {
         if (gtk_toggle_button_get_active (priv->tbutton))
             gtk_widget_grab_focus (GTK_WIDGET (priv->tbutton));
         else
@@ -396,10 +399,10 @@ hildon_volumebar_focus                          (GtkWidget *widget,
     priv = HILDON_VOLUMEBAR_GET_PRIVATE (widget);
     g_assert (priv);
 
-    orientation = GTK_RANGE (priv->volumebar)->orientation;
+    orientation = gtk_orientable_get_orientation (GTK_ORIENTABLE (priv->volumebar));
 
-    has_focus = (GTK_WIDGET_HAS_FOCUS (GTK_WIDGET (priv->volumebar)) ||
-                 GTK_WIDGET_HAS_FOCUS (GTK_WIDGET (priv->tbutton)));
+    has_focus = (gtk_widget_has_focus (GTK_WIDGET (priv->volumebar)) ||
+                 gtk_widget_has_focus (GTK_WIDGET (priv->tbutton)));
 
     switch (direction) {
         case GTK_DIR_UP:
@@ -459,10 +462,10 @@ hildon_volumebar_notify                         (GObject *self,
                                    hildon_volumebar_get_mute (HILDON_VOLUMEBAR (self)));
     }
 
-    if (GTK_WIDGET_MAPPED (self)) {
+    if (gtk_widget_get_mapped (self)) {
         /* show/hide the event window on sensitivity change */
         if (g_str_equal (param->name, "sensitive")) {
-            if (GTK_WIDGET_SENSITIVE (self))
+            if (gtk_widget_get_sensitive (self))
                 gdk_window_hide (priv->event_window);
             else
                 gdk_window_show (priv->event_window);
@@ -474,7 +477,7 @@ hildon_volumebar_notify                         (GObject *self,
 }
 
 static void 
-hildon_volumebar_destroy                        (GtkObject *self)
+hildon_volumebar_destroy                        (GtkWidget *self)
 {
     HildonVolumebarPrivate *priv;
 
@@ -490,8 +493,8 @@ hildon_volumebar_destroy                        (GtkObject *self)
         priv->volumebar = NULL;
     }
 
-    if (GTK_OBJECT_CLASS (parent_class)->destroy)
-        GTK_OBJECT_CLASS (parent_class)->destroy (self);
+    if (GTK_WIDGET_CLASS (parent_class)->destroy)
+        GTK_WIDGET_CLASS (parent_class)->destroy (self);
 }
 
 static void
@@ -549,7 +552,7 @@ hildon_volumebar_get_property                   (GObject *object,
     switch (prop_id) {
 
         case PROP_HILDON_HAS_MUTE:
-            g_value_set_boolean (value, GTK_WIDGET_VISIBLE (priv->tbutton));
+            g_value_set_boolean (value, gtk_widget_is_visible (GTK_WIDGET(priv->tbutton)));
             break;
 
         case PROP_HILDON_LEVEL:
@@ -628,8 +631,8 @@ hildon_volumebar_set_mute                       (HildonVolumebar *self,
     priv = HILDON_VOLUMEBAR_GET_PRIVATE (self);
     g_assert (priv);
 
-    has_focus = (GTK_WIDGET_HAS_FOCUS (GTK_WIDGET (priv->volumebar)) ||
-                 GTK_WIDGET_HAS_FOCUS (GTK_WIDGET (priv->tbutton)));
+    has_focus = (gtk_widget_has_focus (GTK_WIDGET (priv->volumebar)) ||
+                 gtk_widget_has_focus (GTK_WIDGET (priv->tbutton)));
 
     /* Slider should be insensitive when mute is on */
     gtk_widget_set_sensitive (GTK_WIDGET (priv->volumebar), !mute);
@@ -718,7 +721,7 @@ hildon_volumebar_key_press                      (GtkWidget *widget,
     g_assert (priv != NULL);
 
     /* Enter key toggles mute button (unless it is hidden) */
-    if (event->keyval == GDK_Return && GTK_WIDGET_VISIBLE (priv->tbutton)) {
+    if (event->keyval == GDK_KEY_Return && gtk_widget_is_visible (GTK_WIDGET(priv->tbutton))) {
         gtk_toggle_button_set_active (priv->tbutton, 
                 ! hildon_volumebar_get_mute(HILDON_VOLUMEBAR(widget)));
 
