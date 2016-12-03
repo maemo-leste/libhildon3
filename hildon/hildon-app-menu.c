@@ -189,7 +189,7 @@ hildon_app_menu_insert                          (HildonAppMenu *menu,
 
     /* Force widget size */
     hildon_gtk_widget_set_theme_size (GTK_WIDGET (item),
-                                      HILDON_SIZE_FINGER_HEIGHT);
+                                      HILDON_SIZE_FINGER_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
 
     /* Add the item to the menu */
     g_object_ref_sink (item);
