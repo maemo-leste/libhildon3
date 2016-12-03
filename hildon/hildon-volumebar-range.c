@@ -218,15 +218,15 @@ hildon_volumebar_range_keypress                 (GtkWidget *widget,
                                                  GdkEventKey *event)
 {
     /* Accept arrow keys only if they match the orientation of the widget */
-    if (GTK_RANGE (widget)->orientation == GTK_ORIENTATION_HORIZONTAL)
+    if (gtk_orientable_get_orientation (GTK_ORIENTABLE (widget)) == GTK_ORIENTATION_HORIZONTAL)
     {
-        if (event->keyval == GDK_Up || event->keyval == GDK_Down) {
+        if (event->keyval == GDK_KEY_Up || event->keyval == GDK_KEY_Down) {
             return FALSE;
         }
     }
     else
     {
-        if (event->keyval == GDK_Left || event->keyval == GDK_Right) {
+        if (event->keyval == GDK_KEY_Left || event->keyval == GDK_KEY_Right) {
             return FALSE;
         }
     }
@@ -250,7 +250,7 @@ hildon_volumebar_range_new                      (GtkOrientation orientation)
                 "adjustment", adjustment,
                 NULL);
 
-    GTK_RANGE (self)->orientation = orientation;
+    gtk_orientable_set_orientation (GTK_ORIENTABLE (self), orientation);
 
     /* Default vertical range is upside down for purposes of this widget */
     gtk_range_set_inverted (GTK_RANGE (self),
