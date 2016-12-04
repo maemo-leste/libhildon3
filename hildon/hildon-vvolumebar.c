@@ -91,12 +91,18 @@ static void
 hildon_vvolumebar_init                          (HildonVVolumebar * vvolumebar);
 
 static gboolean
-hildon_vvolumebar_expose                        (GtkWidget * widget,
-                                                 GdkEventExpose * event);
+hildon_vvolumebar_draw                          (GtkWidget *widget,
+                                                 cairo_t *cr);
 
-static void 
-hildon_vvolumebar_size_request                  (GtkWidget * widget,
-                                                 GtkRequisition * requisition);
+static void
+hildon_vvolumebar_get_preferred_width           (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_vvolumebar_get_preferred_height          (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
 
 static void
 hildon_vvolumebar_size_allocate                 (GtkWidget * widget,
@@ -140,9 +146,10 @@ hildon_vvolumebar_class_init                    (HildonVVolumebarClass *klass)
 
     parent_class = g_type_class_peek_parent(klass);
 
-    volumebar_class->size_request   = hildon_vvolumebar_size_request;
-    volumebar_class->size_allocate  = hildon_vvolumebar_size_allocate;
-    volumebar_class->expose_event   = hildon_vvolumebar_expose;
+    volumebar_class->get_preferred_width  = hildon_vvolumebar_get_preferred_width;
+    volumebar_class->get_preferred_height = hildon_vvolumebar_get_preferred_height;
+    volumebar_class->size_allocate        = hildon_vvolumebar_size_allocate;
+    volumebar_class->draw                 = hildon_vvolumebar_draw;
 }
 
 static void 
@@ -187,8 +194,8 @@ hildon_vvolumebar_new                           (void)
 }
 
 static gboolean 
-hildon_vvolumebar_expose                        (GtkWidget *widget,
-                                                 GdkEventExpose *event)
+hildon_vvolumebar_draw                          (GtkWidget *widget,
+                                                 cairo_t *cr)
 {
 
     HildonVolumebarPrivate *priv;
@@ -196,29 +203,40 @@ hildon_vvolumebar_expose                        (GtkWidget *widget,
     priv = HILDON_VOLUMEBAR_GET_PRIVATE(HILDON_VOLUMEBAR(widget));
     g_assert (priv);
 
-    if (GTK_WIDGET_DRAWABLE (widget)) {
+    if (gtk_widget_is_drawable (widget)) {
+
         /* Paint background */
-        gtk_paint_box (widget->style, widget->window,
-                GTK_WIDGET_STATE (priv->volumebar), GTK_SHADOW_OUT,
-                NULL, widget, "background",
-                widget->allocation.x,
-                widget->allocation.y,
-                widget->allocation.width,
-                widget->allocation.height);
+        gint width, height;
+        GtkStyleContext *context;
+
+        width = gtk_widget_get_allocated_width (widget);
+        height = gtk_widget_get_allocated_height (widget);
+        context = gtk_widget_get_style_context (widget);
+
+        gtk_render_background (context, cr, 0, 0, width, height);
+        gtk_render_frame (context, cr, 0, 0, width, height);
 
         /* The contents of the widget can paint themselves */
-        (*GTK_WIDGET_CLASS (parent_class)->expose_event) (widget, event);
+        (*GTK_WIDGET_CLASS (parent_class)->draw) (widget, cr);
     }
 
     return FALSE;
 }
 
 static void
-hildon_vvolumebar_size_request                  (GtkWidget *widget,
-                                                 GtkRequisition *requisition)
+hildon_vvolumebar_get_preferred_width           (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
 {
-    requisition->height = MINIMUM_BAR_HEIGHT;
-    requisition->width = DEFAULT_BAR_WIDTH;
+  *minimal_width = *natural_width = DEFAULT_BAR_WIDTH;
+}
+
+static void
+hildon_vvolumebar_get_preferred_height          (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  *minimal_height = *natural_height = MINIMUM_BAR_HEIGHT;
 }
 
 static void
@@ -241,14 +259,14 @@ hildon_vvolumebar_size_allocate                 (GtkWidget *widget,
 
     GTK_WIDGET_CLASS (parent_class)->size_allocate (widget, allocation);
 
-    if (priv->volumebar && GTK_WIDGET_VISIBLE (priv->volumebar)) {
+    if (priv->volumebar && gtk_widget_is_visible (GTK_WIDGET (priv->volumebar))) {
         /* Allocate space for the slider */
         range_allocation.x = allocation->x;
         range_allocation.y = allocation->y + DEFAULT_ENDING_SIZE;
 
         range_allocation.width = DEFAULT_BAR_WIDTH;
 
-        if (priv->tbutton && GTK_WIDGET_VISIBLE (priv->tbutton))
+        if (priv->tbutton && gtk_widget_is_visible (GTK_WIDGET (priv->tbutton)))
         {
             /* Leave room for the mute button */
             range_allocation.height = MAX (0,
@@ -269,7 +287,7 @@ hildon_vvolumebar_size_allocate                 (GtkWidget *widget,
                 &range_allocation);
     }
 
-    if (priv->tbutton && GTK_WIDGET_VISIBLE (priv->tbutton)) {
+    if (priv->tbutton && gtk_widget_is_visible (GTK_WIDGET (priv->tbutton))) {
         /* Allocate space for the mute button */
         button_allocation.x = allocation->x + HORIZONTAL_MUTE_GAP;
         button_allocation.y = allocation->y + allocation->height -
