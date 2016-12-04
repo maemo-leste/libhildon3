@@ -63,7 +63,7 @@ G_BEGIN_DECLS
  *
  * Since: 2.2
  */
-#define HILDON_ICON_SIZE_XSMALL                  gtk_icon_size_from_name ("hildon-xsmall")
+#define HILDON_ICON_SIZE_XSMALL                  16
 
 /**
  * HILDON_ICON_SIZE_SMALL:
@@ -72,7 +72,7 @@ G_BEGIN_DECLS
  *
  * Since: 2.2
  */
-#define HILDON_ICON_SIZE_SMALL                   gtk_icon_size_from_name ("hildon-small")
+#define HILDON_ICON_SIZE_SMALL                   24
 
 /**
  * HILDON_ICON_SIZE_STYLUS:
@@ -81,7 +81,7 @@ G_BEGIN_DECLS
  *
  * Since: 2.2
  */
-#define HILDON_ICON_SIZE_STYLUS                  gtk_icon_size_from_name ("hildon-stylus")
+#define HILDON_ICON_SIZE_STYLUS                  32
 
 /**
  * HILDON_ICON_SIZE_FINGER:
@@ -90,7 +90,7 @@ G_BEGIN_DECLS
  *
  * Since: 2.2
  */
-#define HILDON_ICON_SIZE_FINGER                  gtk_icon_size_from_name ("hildon-finger")
+#define HILDON_ICON_SIZE_FINGER                  48
 
 /**
  * HILDON_ICON_SIZE_THUMB:
@@ -99,7 +99,7 @@ G_BEGIN_DECLS
  *
  * Since: 2.2
  */
-#define HILDON_ICON_SIZE_THUMB                   gtk_icon_size_from_name ("hildon-thumb")
+#define HILDON_ICON_SIZE_THUMB                   64
 
 /**
  * HILDON_ICON_SIZE_LARGE:
@@ -108,7 +108,7 @@ G_BEGIN_DECLS
  *
  * Since: 2.2
  */
-#define HILDON_ICON_SIZE_LARGE                   gtk_icon_size_from_name ("hildon-large")
+#define HILDON_ICON_SIZE_LARGE                   96
 
 /**
  * HILDON_ICON_SIZE_XLARGE:
@@ -117,7 +117,7 @@ G_BEGIN_DECLS
  *
  * Since: 2.2
  */
-#define HILDON_ICON_SIZE_XLARGE                  gtk_icon_size_from_name ("hildon-xlarge")
+#define HILDON_ICON_SIZE_XLARGE                  128
 
 /* legacy hildon icon sizes, updated for new hildon */
 
@@ -129,7 +129,7 @@ G_BEGIN_DECLS
  * Deprecated: Use %HILDON_ICON_SIZE_FINGER instead.
  */
 #ifndef HILDON_DISABLE_DEPRECATED
-#define HILDON_ICON_SIZE_TOOLBAR                 gtk_icon_size_from_name ("hildon-finger")
+#define HILDON_ICON_SIZE_TOOLBAR                 HILDON_ICON_SIZE_FINGER
 #endif
 /* Actual icon sizes */
 
@@ -262,77 +262,77 @@ G_BEGIN_DECLS
  *
  * Key definition for the Up hardkey.
  */
-#define HILDON_HARDKEY_UP                        GDK_Up
+#define HILDON_HARDKEY_UP                        GDK_KEY_Up
 
 /**
  * HILDON_HARDKEY_LEFT:
  *
  * Key definition for the Left hardkey.
  */
-#define HILDON_HARDKEY_LEFT                      GDK_Left
+#define HILDON_HARDKEY_LEFT                      GDK_KEY_Left
 
 /**
  * HILDON_HARDKEY_RIGHT:
  *
  * Key definition for the Right hardkey.
  */
-#define HILDON_HARDKEY_RIGHT                     GDK_Right
+#define HILDON_HARDKEY_RIGHT                     GDK_KEY_Right
 
 /**
  * HILDON_HARDKEY_DOWN:
  *
  * Key definition for the Down hardkey.
  */
-#define HILDON_HARDKEY_DOWN                      GDK_Down
+#define HILDON_HARDKEY_DOWN                      GDK_KEY_Down
 
 /**
  * HILDON_HARDKEY_SELECT:
  *
  * Key definition for the Select hardkey.
  */
-#define HILDON_HARDKEY_SELECT                    GDK_Return
+#define HILDON_HARDKEY_SELECT                    GDK_KEY_Return
 
 /**
  * HILDON_HARDKEY_Menu:
  *
  * Key definition for the Menu hardkey.
  */
-#define HILDON_HARDKEY_MENU                      GDK_F4
+#define HILDON_HARDKEY_MENU                      GDK_KEY_F4
 
 /**
  * HILDON_HARDKEY_HOME:
  *
  * Key definition for the Home hardkey.
  */
-#define HILDON_HARDKEY_HOME                      GDK_F5
+#define HILDON_HARDKEY_HOME                      GDK_KEY_F5
 
 /**
  * HILDON_HARDKEY_ESC:
  *
  * Key definition for the Esc hardkey.
  */
-#define HILDON_HARDKEY_ESC                       GDK_Escape
+#define HILDON_HARDKEY_ESC                       GDK_KEY_Escape
 
 /**
  * HILDON_HARDKEY_FULLSCREEN:
  *
  * Key definition for the Fullscreen hardkey.
  */
-#define HILDON_HARDKEY_FULLSCREEN                GDK_F6
+#define HILDON_HARDKEY_FULLSCREEN                GDK_KEY_F6
 
 /**
  * HILDON_HARDKEY_INCREASE:
  *
  * Key definition for the Increase hardkey.
  */
-#define HILDON_HARDKEY_INCREASE                  GDK_F7
+#define HILDON_HARDKEY_INCREASE                  GDK_KEY_F7
 
 /**
  * HILDON_HARDKEY_DECREASE:
  *
  * Key definition for the Decrease hardkey.
  */
-#define HILDON_HARDKEY_DECREASE                  GDK_F8
+#define HILDON_HARDKEY_DECREASE                  GDK_KEY_F8
 
 gint
 hildon_get_icon_pixel_size                      (GtkIconSize size);
