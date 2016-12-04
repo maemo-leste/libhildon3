@@ -344,9 +344,8 @@ hildon_calendar_popup_init                      (HildonCalendarPopup *cal)
             HILDON_CALENDAR_SHOW_DAY_NAMES |
             HILDON_CALENDAR_SHOW_WEEK_NUMBERS);
 
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (cal)->vbox), priv->cal,
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (cal))), priv->cal,
             TRUE, TRUE, 0);
-    gtk_dialog_set_has_separator (GTK_DIALOG (cal), FALSE);
     gtk_dialog_add_button (GTK_DIALOG (cal), _("wdgt_bd_done"), GTK_RESPONSE_OK);
     gtk_widget_show(priv->cal);
 
@@ -360,7 +359,7 @@ hildon_calendar_popup_init                      (HildonCalendarPopup *cal)
     /* set decorations, needs realizing first */
     /* FIXME That should be moved to on_realize */
     gtk_widget_realize (GTK_WIDGET (cal));
-    gdk_window_set_decorations (GTK_WIDGET (cal)->window, GDK_DECOR_BORDER);
+    gdk_window_set_decorations (gtk_widget_get_window (GTK_WIDGET (cal)), GDK_DECOR_BORDER);
 }
 
 /*
@@ -375,14 +374,14 @@ hildon_key_pressed                              (GtkWidget *widget,
     g_assert (HILDON_IS_CALENDAR_POPUP (cal_popup));
 
     /* Handle Return key press as OK response */
-    if (event->keyval == GDK_Return)
+    if (event->keyval == GDK_KEY_Return)
     {
         gtk_dialog_response (GTK_DIALOG (cal_popup), GTK_RESPONSE_OK);
         return TRUE;
     }
 
     /* Handle Esc key press as CANCEL response */
-    if ((event->keyval == GDK_Escape))
+    if ((event->keyval == GDK_KEY_Escape))
     {
         gtk_dialog_response (GTK_DIALOG (cal_popup), GTK_RESPONSE_CANCEL);
         return TRUE;
@@ -417,7 +416,7 @@ init_dmy                                        (guint year,
 
         /* If selected date is invalid initialize the date with current date */ 
         g_date_clear (&date, 1);
-        g_date_set_time (&date, time (NULL));
+        g_date_set_time_t (&date, time (NULL));
 
         *d = g_date_get_day (&date);
         *m = g_date_get_month (&date);
