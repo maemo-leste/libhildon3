@@ -177,12 +177,21 @@ hildon_child_forall                             (GtkContainer *container,
                                                  gpointer callback_data);
 
 static void 
-hildon_date_editor_destroy                      (GtkObject *self);
+hildon_date_editor_destroy                      (GtkWidget *widget);
 
 static void
 hildon_date_editor_size_allocate                (GtkWidget *widget,
                                                  GtkAllocation *allocation);
 
+static void
+hildon_date_editor_get_preferred_width          (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_date_editor_get_preferred_height         (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
 static void
 hildon_date_editor_size_request                 (GtkWidget *widget,
                                                  GtkRequisition *requisition);
@@ -256,12 +265,13 @@ hildon_date_editor_class_init                   (HildonDateEditorClass *editor_c
 
     gobject_class->set_property             = hildon_date_editor_set_property;
     gobject_class->get_property             = hildon_date_editor_get_property;
-    widget_class->size_request              = hildon_date_editor_size_request;
-    widget_class->size_allocate             = hildon_date_editor_size_allocate;
+    widget_class->get_preferred_width       = hildon_date_editor_get_preferred_width;
+    widget_class->get_preferred_height      = hildon_date_editor_get_preferred_height;
     widget_class->focus                     = hildon_date_editor_focus;
+    widget_class->destroy                   = hildon_date_editor_destroy;
 
     container_class->forall                 = hildon_child_forall;
-    GTK_OBJECT_CLASS(editor_class)->destroy = hildon_date_editor_destroy;
+
 
     editor_class->date_error                = (gpointer) hildon_date_editor_date_error; 
 
@@ -451,13 +461,13 @@ hildon_date_editor_init                         (HildonDateEditor *editor)
     priv = HILDON_DATE_EDITOR_GET_PRIVATE (editor);
     g_assert (priv);
 
-    GTK_WIDGET_SET_FLAGS (GTK_WIDGET (editor), GTK_NO_WINDOW);
+    gtk_widget_set_has_window(GTK_WIDGET (editor), FALSE);
 
     gtk_widget_push_composite_child ();
 
     /* initialize values */
     g_date_clear (&cur_date, 1);
-    g_date_set_time (&cur_date, time (NULL));
+    g_date_set_time_t (&cur_date, time (NULL));
 
     priv->day = g_date_get_day (&cur_date);
     priv->month = g_date_get_month (&cur_date);
@@ -473,14 +483,9 @@ hildon_date_editor_init                         (HildonDateEditor *editor)
     priv->m_entry = gtk_entry_new ();
     priv->y_entry = gtk_entry_new ();
 
-#ifdef MAEMO_GTK
-    g_object_set (G_OBJECT(priv->d_entry), "hildon-input-mode", 
-            HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
-    g_object_set (G_OBJECT(priv->m_entry), "hildon-input-mode", 
-            HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
-    g_object_set (G_OBJECT(priv->y_entry), "hildon-input-mode", 
-            HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
-#endif
+    gtk_entry_set_input_purpose (GTK_ENTRY (priv->d_entry), GTK_INPUT_PURPOSE_DIGITS);
+    gtk_entry_set_input_purpose (GTK_ENTRY (priv->m_entry), GTK_INPUT_PURPOSE_DIGITS);
+    gtk_entry_set_input_purpose (GTK_ENTRY (priv->y_entry), GTK_INPUT_PURPOSE_DIGITS);
 
     /* set entry look */
     gtk_entry_set_width_chars (GTK_ENTRY (priv->d_entry), DAY_ENTRY_WIDTH);
@@ -499,19 +504,20 @@ hildon_date_editor_init                         (HildonDateEditor *editor)
     gtk_widget_set_composite_name (priv->m_entry, "month_entry");
     gtk_widget_set_composite_name (priv->y_entry, "year_entry");
 
-    priv->d_box_date = gtk_hbox_new (FALSE, 0);
+    priv->d_box_date = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
 
     priv->d_button_image = gtk_button_new ();
     priv->calendar_icon = gtk_image_new ();
     real_set_calendar_icon_state (priv, FALSE);
-    GTK_WIDGET_UNSET_FLAGS (priv->d_button_image, GTK_CAN_FOCUS | GTK_CAN_DEFAULT);
+    gtk_widget_set_can_focus(priv->d_button_image, FALSE);
+    gtk_widget_set_can_default(priv->d_button_image, FALSE);
 
     apply_locale_field_order (priv);
 
     gtk_container_add (GTK_CONTAINER (priv->frame), priv->d_box_date);
     gtk_container_add (GTK_CONTAINER (priv->d_button_image), priv->calendar_icon);
     gtk_button_set_relief (GTK_BUTTON (priv->d_button_image), GTK_RELIEF_NONE);
-    gtk_button_set_focus_on_click (GTK_BUTTON (priv->d_button_image), FALSE);
+    gtk_widget_set_focus_on_click (GTK_WIDGET (priv->d_button_image), FALSE);
 
     gtk_widget_set_parent (priv->frame, GTK_WIDGET (editor));
     gtk_widget_set_parent (priv->d_button_image, GTK_WIDGET (editor));
@@ -519,61 +525,61 @@ hildon_date_editor_init                         (HildonDateEditor *editor)
     gtk_widget_show_all (priv->d_button_image);
 
     /* image button signal connects */
-    g_signal_connect (GTK_OBJECT (priv->d_button_image), "pressed",
+    g_signal_connect (GTK_WIDGET (priv->d_button_image), "button-press-event",
             G_CALLBACK (hildon_date_editor_icon_press), editor);
-    g_signal_connect (GTK_OBJECT (priv->d_button_image), "released",
+    g_signal_connect (GTK_WIDGET (priv->d_button_image), "button-release-event",
             G_CALLBACK (hildon_date_editor_released), editor);
-    g_signal_connect (GTK_OBJECT (priv->d_button_image), "clicked",
+    g_signal_connect (GTK_WIDGET (priv->d_button_image), "clicked",
             G_CALLBACK (hildon_date_editor_clicked), editor);
-    g_signal_connect (GTK_OBJECT (priv->d_button_image), "key_press_event",
+    g_signal_connect (GTK_WIDGET (priv->d_button_image), "key-press-event",
             G_CALLBACK (hildon_date_editor_keypress), editor);
 
     /* entry signal connects */    
-    g_signal_connect (GTK_OBJECT (priv->d_entry), "focus-in-event",
+    g_signal_connect (GTK_WIDGET (priv->d_entry), "focus-in-event",
             G_CALLBACK (hildon_date_editor_entry_focus_in), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->m_entry), "focus-in-event",
+    g_signal_connect (GTK_WIDGET (priv->m_entry), "focus-in-event",
             G_CALLBACK (hildon_date_editor_entry_focus_in), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->y_entry), "focus-in-event",
+    g_signal_connect (GTK_WIDGET (priv->y_entry), "focus-in-event",
             G_CALLBACK (hildon_date_editor_entry_focus_in), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->d_entry), "focus-out-event",
+    g_signal_connect (GTK_WIDGET (priv->d_entry), "focus-out-event",
             G_CALLBACK (hildon_date_editor_entry_focus_out), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->m_entry), "focus-out-event",
+    g_signal_connect (GTK_WIDGET (priv->m_entry), "focus-out-event",
             G_CALLBACK (hildon_date_editor_entry_focus_out), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->y_entry), "focus-out-event",
+    g_signal_connect (GTK_WIDGET (priv->y_entry), "focus-out-event",
             G_CALLBACK (hildon_date_editor_entry_focus_out), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->d_entry), "key-press-event",
+    g_signal_connect (GTK_WIDGET (priv->d_entry), "key-press-event",
             G_CALLBACK (hildon_date_editor_keypress), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->m_entry), "key-press-event",
+    g_signal_connect (GTK_WIDGET (priv->m_entry), "key-press-event",
             G_CALLBACK (hildon_date_editor_keypress), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->y_entry), "key-press-event",
+    g_signal_connect (GTK_WIDGET (priv->y_entry), "key-press-event",
             G_CALLBACK (hildon_date_editor_keypress), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->d_entry), "key-release-event",
+    g_signal_connect (GTK_WIDGET (priv->d_entry), "key-release-event",
             G_CALLBACK (hildon_date_editor_keyrelease), editor);
 
-    g_signal_connect(GTK_OBJECT(priv->m_entry), "key-release-event",
+    g_signal_connect (GTK_WIDGET (priv->m_entry), "key-release-event",
             G_CALLBACK(hildon_date_editor_keyrelease), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->y_entry), "key-release-event",
+    g_signal_connect (GTK_WIDGET (priv->y_entry), "key-release-event",
             G_CALLBACK (hildon_date_editor_keyrelease), editor);
 
     hildon_date_editor_set_date (editor, priv->year, priv->month, priv->day);
 
-    g_signal_connect (GTK_OBJECT (priv->d_entry), "changed",
+    g_signal_connect (GTK_EDITABLE (priv->d_entry), "changed",
             G_CALLBACK (hildon_date_editor_entry_changed), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->m_entry), "changed",
+    g_signal_connect (GTK_EDITABLE (priv->m_entry), "changed",
             G_CALLBACK (hildon_date_editor_entry_changed), editor);
 
-    g_signal_connect (GTK_OBJECT (priv->y_entry), "changed",
+    g_signal_connect (GTK_EDITABLE (priv->y_entry), "changed",
             G_CALLBACK (hildon_date_editor_entry_changed), editor);
 
     gtk_widget_pop_composite_child ();
@@ -687,11 +693,11 @@ hildon_child_forall                             (GtkContainer *container,
 }
 
 static void 
-hildon_date_editor_destroy                      (GtkObject *self)
+hildon_date_editor_destroy                      (GtkWidget *widget)
 {
     HildonDateEditorPrivate *priv;
 
-    priv = HILDON_DATE_EDITOR_GET_PRIVATE (self);
+    priv = HILDON_DATE_EDITOR_GET_PRIVATE (widget);
     g_assert (priv);
 
     if (priv->frame) {
@@ -707,8 +713,8 @@ hildon_date_editor_destroy                      (GtkObject *self)
         priv->delims = NULL;
     }
 
-    if (GTK_OBJECT_CLASS (parent_class)->destroy)
-        GTK_OBJECT_CLASS (parent_class)->destroy (self);
+    if (GTK_WIDGET_CLASS (parent_class)->destroy)
+        GTK_WIDGET_CLASS (parent_class)->destroy (widget);
 }
 
 /**
@@ -1130,15 +1136,15 @@ hildon_date_editor_keyrelease                   (GtkWidget *widget,
     ed = HILDON_DATE_EDITOR (data);
     priv = HILDON_DATE_EDITOR_GET_PRIVATE (ed);
 
-    if (event->keyval == GDK_KP_Enter || 
-        event->keyval == GDK_Return ||
-        event->keyval == GDK_ISO_Enter) {
+    if (event->keyval == GDK_KEY_KP_Enter || 
+        event->keyval == GDK_KEY_Return ||
+        event->keyval == GDK_KEY_ISO_Enter) {
         if (hildon_date_editor_set_calendar_icon_state (ed, FALSE))
         {
             popup_calendar_dialog (ed);
             return TRUE;
         }
-    } else if (event->keyval == GDK_Escape)
+    } else if (event->keyval == GDK_KEY_Escape)
         priv->skip_validation = FALSE;
 
     return FALSE;
@@ -1159,13 +1165,13 @@ hildon_date_editor_keypress                     (GtkWidget *widget,
     ed = HILDON_DATE_EDITOR (data);
 
     switch (event->keyval) {
-        case GDK_Return:
-        case GDK_ISO_Enter:
+        case GDK_KEY_Return:
+        case GDK_KEY_ISO_Enter:
             /* Ignore return value, since we want to handle event at all times.
                otherwise vkb would popup when the keyrepeat starts. */
             hildon_date_editor_set_calendar_icon_state (ed, TRUE);
             return TRUE;
-        case GDK_Escape:
+        case GDK_KEY_Escape:
             priv = HILDON_DATE_EDITOR_GET_PRIVATE (ed);
             priv->skip_validation = TRUE;
             break;
@@ -1255,6 +1261,30 @@ hildon_date_editor_date_error                   (HildonDateEditor *editor,
     return TRUE;
 }
 
+static void
+hildon_date_editor_get_preferred_width          (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_date_editor_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_date_editor_get_preferred_height         (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_date_editor_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
+
 static void 
 hildon_date_editor_size_request                 (GtkWidget *widget,
                                                  GtkRequisition *requisition)
@@ -1271,8 +1301,8 @@ hildon_date_editor_size_request                 (GtkWidget *widget,
     g_assert (priv);
 
     /* Our own children affect our size */
-    gtk_widget_size_request (priv->frame, &f_req);
-    gtk_widget_size_request (priv->d_button_image, &img_req);
+    gtk_widget_get_preferred_size (priv->frame, &f_req, NULL);
+    gtk_widget_get_preferred_size (priv->d_button_image, &img_req, NULL);
 
     /* calculate our size */
     requisition->width = f_req.width + img_req.width + HILDON_MARGIN_DEFAULT;
@@ -1303,7 +1333,7 @@ hildon_date_editor_size_allocate                (GtkWidget *widget,
     priv = HILDON_DATE_EDITOR_GET_PRIVATE (ed);
 
     rtl = (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL);
-    widget->allocation = *allocation;
+    gtk_widget_set_allocation (widget, allocation);
 
     gtk_widget_get_child_requisition (widget, &max_req);
 
@@ -1316,7 +1346,7 @@ hildon_date_editor_size_allocate                (GtkWidget *widget,
         MAX (allocation->width - max_req.width, 0) / 2;
 
     /* calculate allocations */
-    if (GTK_WIDGET_VISIBLE (widget)) {
+    if (gtk_widget_is_visible (widget)) {
         /* allocate frame */
         gtk_widget_get_child_requisition (priv->frame, &req);
 
@@ -1337,11 +1367,11 @@ hildon_date_editor_size_allocate                (GtkWidget *widget,
             f_alloc.x  += img_alloc.width + HILDON_MARGIN_DEFAULT;
         }
 
-        if (GTK_WIDGET_VISIBLE (priv->d_button_image)) {
+        if (gtk_widget_is_visible (priv->d_button_image)) {
             gtk_widget_size_allocate (priv->d_button_image, &img_alloc);
         }
 
-        if (GTK_WIDGET_VISIBLE (priv->frame)) {
+        if (gtk_widget_is_visible (priv->frame)) {
             gtk_widget_size_allocate (priv->frame, &f_alloc);
         }
     }
@@ -1350,15 +1380,18 @@ hildon_date_editor_size_allocate                (GtkWidget *widget,
        are not our own children, but we need to force to appear 
        higher. This ugly hack is needed to compensate the forced
        height in size_request. */
+    GtkAllocation d_entry_alloc;   
+    gtk_widget_get_allocation(priv->d_entry, &d_entry_alloc); 
+
     for (iter = priv->delims; iter; iter = iter->next)
     {
         GtkWidget *delim;
         GtkAllocation alloc;
 
         delim = GTK_WIDGET (iter->data);
-        alloc = delim->allocation;
+        gtk_widget_get_allocation(delim, &alloc);
         alloc.height = max_req.height; 
-        alloc.y = priv->d_entry->allocation.y - 2;
+        alloc.y = d_entry_alloc.y - 2;
 
         gtk_widget_size_allocate (delim, &alloc);
     }
