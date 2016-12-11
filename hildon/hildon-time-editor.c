@@ -198,7 +198,7 @@ hildon_time_editor_forall                       (GtkContainer *container,
                                                  gpointer callback_data);
                           
 static void
-hildon_time_editor_destroy                      (GtkObject *self);
+hildon_time_editor_destroy                      (GtkWidget *widget);
 
 static gboolean
 hildon_time_editor_entry_focus_out              (GtkWidget *widget,
@@ -337,11 +337,11 @@ hildon_time_editor_forall                       (GtkContainer *container,
 }
 
 static void 
-hildon_time_editor_destroy                      (GtkObject *self)
+hildon_time_editor_destroy                      (GtkWidget *widget)
 {
     HildonTimeEditorPrivate *priv;
 
-    priv = HILDON_TIME_EDITOR_GET_PRIVATE (self);
+    priv = HILDON_TIME_EDITOR_GET_PRIVATE (widget);
     g_assert (priv);
 
     if (priv->iconbutton) {
@@ -353,8 +353,8 @@ hildon_time_editor_destroy                      (GtkObject *self)
         priv->frame = NULL;
     }
 
-    if (GTK_OBJECT_CLASS (parent_class)->destroy)
-        GTK_OBJECT_CLASS (parent_class)->destroy (self);
+    if (GTK_WIDGET_CLASS (parent_class)->destroy)
+        GTK_WIDGET_CLASS (parent_class)->destroy (widget);
 }
 
 static void
@@ -373,9 +373,9 @@ hildon_time_editor_class_init                   (HildonTimeEditorClass *editor_c
     widget_class->size_request                  = hildon_time_editor_size_request;
     widget_class->size_allocate                 = hildon_time_editor_size_allocate;
     widget_class->focus                         = hildon_time_editor_focus;
+    widget_class->destroy                       = hildon_time_editor_destroy;
 
     container_class->forall                     = hildon_time_editor_forall;
-    GTK_OBJECT_CLASS (editor_class)->destroy    = hildon_time_editor_destroy;
 
     object_class->finalize                      = hildon_time_editor_finalize;
 
@@ -526,17 +526,18 @@ hildon_time_editor_init                         (HildonTimeEditor *editor)
     priv->skipper        = FALSE;
 
     icon = gtk_image_new_from_icon_name (ICON_NAME, HILDON_ICON_SIZE_SMALL);
-    hbox = gtk_hbox_new (FALSE, 0);
+    hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
 
-    GTK_WIDGET_SET_FLAGS (editor, GTK_NO_WINDOW);
-    GTK_WIDGET_UNSET_FLAGS (priv->iconbutton, GTK_CAN_FOCUS | GTK_CAN_DEFAULT);
+    gtk_widget_set_has_window (GTK_WIDGET (editor), FALSE);
+    gtk_widget_set_can_focus (priv->iconbutton, FALSE);
+    gtk_widget_set_can_default (priv->iconbutton, FALSE);
 
     gtk_container_set_border_width (GTK_CONTAINER(priv->frame), 0);
 
     gtk_container_add (GTK_CONTAINER (priv->iconbutton), icon);
     gtk_container_add (GTK_CONTAINER (priv->ampm_button), priv->ampm_label);
     gtk_button_set_relief(GTK_BUTTON (priv->ampm_button), GTK_RELIEF_NONE);
-    gtk_button_set_focus_on_click (GTK_BUTTON (priv->ampm_button), FALSE);
+    gtk_widget_set_focus_on_click (priv->ampm_button, FALSE);
 
     /* Create hour, minute and second entries */
     for (i = 0; i < ENTRY_COUNT; i++)
@@ -546,10 +547,8 @@ hildon_time_editor_init                         (HildonTimeEditor *editor)
         /* No frames for entries, so that they all appear to be inside one long entry */
         gtk_entry_set_has_frame (GTK_ENTRY (priv->entries[i]), FALSE);
 
-#ifdef MAEMO_GTK 
         /* Set the entries to accept only numeric characters */
-        g_object_set (priv->entries[i], "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
-#endif
+        gtk_entry_set_input_purpose (GTK_ENTRY (priv->entries[i]), GTK_INPUT_PURPOSE_DIGITS);
 
         /* The entry fields all take exactly two characters */
         gtk_entry_set_max_length (GTK_ENTRY (priv->entries[i]), 2);
@@ -586,7 +585,7 @@ hildon_time_editor_init                         (HildonTimeEditor *editor)
     gtk_box_pack_start (GTK_BOX (hbox), priv->sec_label,            FALSE, FALSE, 0);
     gtk_box_pack_start (GTK_BOX (hbox), priv->entries[ENTRY_SECS],  FALSE, FALSE, 0);
     gtk_box_pack_start (GTK_BOX (hbox), priv->ampm_button,          FALSE, FALSE, 0);
-    gtk_misc_set_padding (GTK_MISC (priv->ampm_label), 0, 0);
+    g_object_set (priv->ampm_label, "margin", 0, NULL);
 
     gtk_container_add (GTK_CONTAINER (priv->frame), hbox);
 
@@ -1599,7 +1598,7 @@ hildon_time_editor_inserted_text                (GtkEditable *editable,
                 *position = -1;
             }
             else if (GTK_WIDGET (editable) == priv->entries[ENTRY_MINS] &&
-                    GTK_WIDGET_VISIBLE (priv->entries[ENTRY_SECS])) 
+                    gtk_widget_is_visible (priv->entries[ENTRY_SECS])) 
             {
                 /* See above */
                 gtk_widget_grab_focus (priv->entries[ENTRY_SECS]);
@@ -1713,11 +1712,11 @@ hildon_time_editor_size_request                 (GtkWidget *widget,
     priv = HILDON_TIME_EDITOR_GET_PRIVATE (editor);
 
     /* Get frame's size */
-    gtk_widget_size_request (priv->frame, requisition);
+    gtk_widget_get_preferred_size (priv->frame, requisition, NULL);
 
-    if (GTK_WIDGET_VISIBLE (priv->iconbutton))
+    if (gtk_widget_is_visible (priv->iconbutton))
     {
-        gtk_widget_size_request (priv->iconbutton, &req);
+        gtk_widget_get_preferred_size (priv->iconbutton, &req, NULL);
         /* Reserve space for icon */
         requisition->width += req.width + ICON_PRESSED +
             HILDON_MARGIN_DEFAULT;
@@ -1742,7 +1741,7 @@ hildon_time_editor_size_allocate                (GtkWidget *widget,
 
     rtl = (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL);
     widget->allocation = *allocation;
-    gtk_widget_get_child_requisition (widget, &max_req);
+    gtk_widget_get_preferred_size (widget, &max_req, NULL);
 
     /* Center horizontally */
     alloc.x = allocation->x + MAX (allocation->width - max_req.width, 0) / 2;
@@ -1751,9 +1750,9 @@ hildon_time_editor_size_allocate                (GtkWidget *widget,
 
     /* allocate frame */
     if (rtl)
-        gtk_widget_get_child_requisition (priv->iconbutton, &req);
+        gtk_widget_get_preferred_size (priv->iconbutton, &req, NULL);
     else
-        gtk_widget_get_child_requisition (priv->frame, &req);
+        gtk_widget_get_preferred_size (priv->frame, &req, NULL);
 
     alloc.width = req.width;
     alloc.height = max_req.height;
@@ -1763,11 +1762,11 @@ hildon_time_editor_size_allocate                (GtkWidget *widget,
         gtk_widget_size_allocate (priv->frame, &alloc);
 
     /* allocate icon */
-    if (GTK_WIDGET_VISIBLE (priv->iconbutton)) {
+    if (gtk_widget_is_visible (priv->iconbutton)) {
         if (rtl)
-            gtk_widget_get_child_requisition (priv->frame, &req);
+            gtk_widget_get_preferred_size (priv->frame, &req, NULL);
         else
-            gtk_widget_get_child_requisition (priv->iconbutton, &req);
+            gtk_widget_get_preferred_size (priv->iconbutton, &req, NULL);
 
         alloc.x += alloc.width + HILDON_MARGIN_DEFAULT;
         alloc.width = req.width;
@@ -1821,8 +1820,8 @@ hildon_time_editor_entry_keypress (GtkEntry *entry,
 {
   switch (event->keyval)
     {
-    case GDK_Return:
-    case GDK_ISO_Enter:
+    case GDK_KEY_Return:
+    case GDK_KEY_ISO_Enter:
       hildon_time_editor_icon_clicked (GTK_WIDGET (entry), data);
       return TRUE;
     default:
