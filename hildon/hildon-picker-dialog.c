@@ -110,6 +110,16 @@ static void
 hildon_picker_dialog_realize                    (GtkWidget *widget);
 
 static void
+hildon_picker_dialog_get_preferred_width        (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_picker_dialog_get_preferred_height       (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
+
+static void
 hildon_picker_dialog_size_request               (GtkWidget *widget,
                                                  GtkRequisition *requisition);
 
@@ -159,14 +169,10 @@ static void
 hildon_picker_dialog_class_init (HildonPickerDialogClass * class)
 {
   GObjectClass *gobject_class;
-  GtkObjectClass *object_class;
   GtkWidgetClass *widget_class;
-  GtkContainerClass *container_class;
 
   gobject_class = (GObjectClass *) class;
-  object_class = (GtkObjectClass *) class;
   widget_class = (GtkWidgetClass *) class;
-  container_class = (GtkContainerClass *) class;
 
   /* GObject */
   gobject_class->set_property = hildon_picker_dialog_set_property;
@@ -176,7 +182,8 @@ hildon_picker_dialog_class_init (HildonPickerDialogClass * class)
   /* GtkWidget */
   widget_class->show = hildon_picker_dialog_show;
   widget_class->realize = hildon_picker_dialog_realize;
-  widget_class->size_request = hildon_picker_dialog_size_request,
+  widget_class->get_preferred_height = hildon_picker_dialog_get_preferred_width;
+  widget_class->get_preferred_height = hildon_picker_dialog_get_preferred_height;
 
   /* HildonPickerDialog */
   class->set_selector = _hildon_picker_dialog_set_selector;
@@ -234,7 +241,7 @@ hildon_picker_dialog_class_init (HildonPickerDialogClass * class)
                                             638,
                                             G_PARAM_READWRITE));
 
-  g_type_class_add_private (object_class, sizeof (HildonPickerDialogPrivate));
+  g_type_class_add_private (class, sizeof (HildonPickerDialogPrivate));
 }
 
 
@@ -247,8 +254,7 @@ hildon_picker_dialog_init (HildonPickerDialog * dialog)
   dialog->priv->button =
     gtk_dialog_add_button (GTK_DIALOG (dialog), "", GTK_RESPONSE_OK);
   gtk_widget_grab_default (dialog->priv->button);
-  gtk_button_set_focus_on_click (GTK_BUTTON (dialog->priv->button), FALSE);
-  gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
+  gtk_widget_set_focus_on_click (GTK_WIDGET (dialog->priv->button), FALSE);
 
   dialog->priv->signal_changed_id = 0;
   dialog->priv->signal_columns_changed_id = 0;
@@ -338,6 +344,30 @@ hildon_picker_dialog_show                       (GtkWidget *widget)
 }
 
 static void
+hildon_picker_dialog_get_preferred_width          (GtkWidget *widget,
+                                                   gint      *minimal_width,
+                                                   gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_picker_dialog_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_picker_dialog_get_preferred_height         (GtkWidget *widget,
+                                                   gint      *minimal_height,
+                                                   gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_picker_dialog_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
+
+static void
 hildon_picker_dialog_size_request               (GtkWidget *widget,
                                                  GtkRequisition *requisition)
 {
@@ -354,13 +384,13 @@ hildon_picker_dialog_size_request               (GtkWidget *widget,
 
     bin = GTK_BIN (widget);
 
-    requisition->width = GTK_CONTAINER (widget)->border_width * 2;
+    requisition->width = gtk_container_get_border_width(GTK_CONTAINER (widget)) * 2;
     /* Adding pannable container border using 4 instead of 2 */
-    requisition->height = GTK_CONTAINER (widget)->border_width * 4;
+    requisition->height = gtk_container_get_border_width(GTK_CONTAINER (widget)) * 4;
 
     /* assure the requisition is done */
-    gtk_widget_size_request (bin->child, &child_requisition);
-    gtk_widget_get_child_requisition (GTK_WIDGET (selector), &selector_requisition);
+    gtk_widget_get_preferred_size (gtk_bin_get_child (bin), &child_requisition, NULL);
+    gtk_widget_get_preferred_size (GTK_WIDGET (selector), &selector_requisition, NULL);
 
     hildon_touch_selector_optimal_size_request (selector,
                                                 &optimal_requisition);
@@ -374,9 +404,12 @@ hildon_picker_dialog_size_request               (GtkWidget *widget,
                                requisition->height +
                                optimal_requisition.height -
                                selector_requisition.height);
-  } else
-    GTK_WIDGET_CLASS (hildon_picker_dialog_parent_class)->size_request
-      (widget, requisition);
+  } else {
+    GTK_WIDGET_CLASS (hildon_picker_dialog_parent_class)->get_preferred_width
+      (widget, &requisition->width, NULL);
+    GTK_WIDGET_CLASS (hildon_picker_dialog_parent_class)->get_preferred_height
+      (widget, &requisition->height, NULL);
+  }
 }
 
 static void
@@ -515,7 +548,7 @@ on_selector_columns_changed (HildonTouchSelector * selector, gpointer userdata)
   dialog = HILDON_PICKER_DIALOG (userdata);
 
   prepare_action_area (dialog);
-  if (GTK_WIDGET_REALIZED (dialog)) {
+  if (gtk_widget_get_realized (GTK_WIDGET (dialog))) {
     setup_interaction_mode (dialog);
   }
 }
@@ -668,9 +701,9 @@ static void
 prepare_action_area (HildonPickerDialog *dialog)
 {
   if (requires_done_button (dialog)) {
-    gtk_widget_show (GTK_DIALOG (dialog)->action_area);
+//    gtk_widget_show (gtk_dialog_get_action_area (GTK_DIALOG (dialog)));
   } else {
-    gtk_widget_hide (GTK_DIALOG (dialog)->action_area);
+//    gtk_widget_hide (gtk_dialog_get_action_area (GTK_DIALOG (dialog)));
   }
 }
 
@@ -724,7 +757,7 @@ _hildon_picker_dialog_set_selector (HildonPickerDialog * dialog,
 
   /* Remove the old selector, if any */
   if (dialog->priv->selector != NULL) {
-    gtk_container_remove (GTK_CONTAINER (GTK_DIALOG (dialog)->vbox),
+    gtk_container_remove (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
                           dialog->priv->selector);
     if (dialog->priv->signal_columns_changed_id) {
             g_signal_handler_disconnect (dialog->priv->selector,
@@ -735,7 +768,7 @@ _hildon_picker_dialog_set_selector (HildonPickerDialog * dialog,
   dialog->priv->selector = GTK_WIDGET (selector);
 
   /* Pack the new selector */
-  gtk_box_pack_start (GTK_BOX (GTK_DIALOG (dialog)->vbox),
+  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
                       dialog->priv->selector, TRUE, TRUE, 0);
 
   g_object_unref (selector);
@@ -743,7 +776,7 @@ _hildon_picker_dialog_set_selector (HildonPickerDialog * dialog,
   gtk_widget_show (dialog->priv->selector);
 
   prepare_action_area (dialog);
-  if (GTK_WIDGET_REALIZED (dialog)) {
+  if (gtk_widget_get_realized (GTK_WIDGET (dialog))) {
     setup_interaction_mode (dialog);
   }
 
