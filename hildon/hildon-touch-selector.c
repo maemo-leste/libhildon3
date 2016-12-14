@@ -85,7 +85,7 @@
  * create_customized_selector ()
  * {
  *   GtkWidget *selector = NULL;
- *   GSList *icon_list = NULL;
+ *   GList *icon_list = NULL;
  *   GtkListStore *store_icons = NULL;
  *   GSList *item = NULL;
  *   GtkCellRenderer *renderer = NULL;
@@ -93,10 +93,10 @@
  * <!-- -->
  *   selector = hildon_touch_selector_new ();
  * <!-- -->
- *   icon_list = gtk_stock_list_ids ();
+ *   icon_list = gtk_icon_theme_list_icons (gtk_icon_theme_get_default (), "Actions");
  * <!-- -->
  *   store_icons = gtk_list_store_new (1, G_TYPE_STRING);
- *   for (item = icon_list; item; item = g_slist_next (item)) {
+ *   for (item = icon_list; item; item = g_list_next (item)) {
  *     GtkTreeIter iter;
  *     gchar *label = item->data;
  * <!-- -->
@@ -104,7 +104,7 @@
  *     gtk_list_store_set (store_icons, &amp;iter, 0, label, -1);
  *     g_free (label);
  *   }
- *   g_slist_free (icon_list);
+ *   g_list_free (icon_list);
  * <!-- -->
  *   renderer = gtk_cell_renderer_pixbuf_new ();
  *   gtk_cell_renderer_set_fixed_size (renderer, -1, 100);
@@ -176,6 +176,7 @@
 
 #include "hildon-gtk.h"
 
+#include "hildon-enum-types.h"
 #include "hildon-pannable-area.h"
 #include "hildon-touch-selector.h"
 #include "hildon-touch-selector-private.h"
@@ -185,16 +186,16 @@
 #define HILDON_TOUCH_SELECTOR_GET_PRIVATE(obj)                          \
   (G_TYPE_INSTANCE_GET_PRIVATE ((obj), HILDON_TYPE_TOUCH_SELECTOR, HildonTouchSelectorPrivate))
 
-G_DEFINE_TYPE (HildonTouchSelector, hildon_touch_selector, GTK_TYPE_VBOX)
+G_DEFINE_TYPE (HildonTouchSelector, hildon_touch_selector, GTK_TYPE_BOX)
 
 /*
  * IMPLEMENTATION NOTES:
  * Struct to maintain the data of each column. The columns are the elements
  * of the widget that belongs properly to the selection behaviour. Although
- * internally the columns are arranged in a private #GtkHBox, as the selector
- * itself is a #GtkVBox, you can add more widgets, like buttons etc., so
- * you finally could have a widget with more elements that the columns, but
- * this doesn't belongs to the selection logic
+ * internally the columns are arranged in a private horizontal #GtkBox, as 
+ * the selector itself is a vertical #GtkBox, you can add more widgets,
+ * like buttons etc., so you finally could have a widget with more elements
+ * that the columns, but this doesn't belongs to the selection logic
  */
 struct _HildonTouchSelectorColumnPrivate
 {
@@ -346,11 +347,11 @@ static void
 hildon_touch_selector_class_init (HildonTouchSelectorClass * class)
 {
   GObjectClass *gobject_class;
-  GtkObjectClass *object_class;
+  GtkWidgetClass *widget_class;
   GtkContainerClass *container_class;
 
   gobject_class = G_OBJECT_CLASS (class);
-  object_class = GTK_OBJECT_CLASS (class);
+  widget_class = (GtkWidgetClass *) class;
   container_class = GTK_CONTAINER_CLASS (class);
 
   /* GObject */
@@ -474,7 +475,7 @@ hildon_touch_selector_class_init (HildonTouchSelectorClass * class)
                        "} widget \"*.fremantle-htst\" style \"fremantle-htst\""
                        "widget_class \"*<HildonPannableArea>.GtkTreeView\" style :highest \"fremantle-htst\"");
 
-  g_type_class_add_private (object_class, sizeof (HildonTouchSelectorPrivate));
+  g_type_class_add_private (class, sizeof (HildonTouchSelectorPrivate));
 }
 
 static void
@@ -535,7 +536,7 @@ hildon_touch_selector_init (HildonTouchSelector * selector)
 {
   selector->priv = HILDON_TOUCH_SELECTOR_GET_PRIVATE (selector);
 
-  GTK_WIDGET_SET_FLAGS (GTK_WIDGET (selector), GTK_NO_WINDOW);
+  gtk_widget_set_has_window (GTK_WIDGET (selector), FALSE);
   gtk_widget_set_redraw_on_allocate (GTK_WIDGET (selector), FALSE);
 
   selector->priv->columns = NULL;
@@ -545,7 +546,7 @@ hildon_touch_selector_init (HildonTouchSelector * selector)
   selector->priv->print_user_data = NULL;
   selector->priv->print_destroy_func = NULL;
   selector->priv->initial_scroll = TRUE;
-  selector->priv->hbox = gtk_hbox_new (FALSE, 0);
+  selector->priv->hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
 
   selector->priv->changed_blocked = FALSE;
 
@@ -867,7 +868,7 @@ _create_new_column (HildonTouchSelector * selector,
 
   gtk_tree_view_set_enable_search (tv, FALSE);
   if (!selector->priv->has_live_search) {
-    GTK_WIDGET_UNSET_FLAGS (GTK_WIDGET (tv), GTK_CAN_FOCUS);
+    gtk_widget_set_can_focus (GTK_WIDGET (tv), FALSE);
   }
 
   filter = gtk_tree_model_filter_new (model, NULL);
@@ -1543,7 +1544,7 @@ hildon_touch_selector_append_column (HildonTouchSelector * selector,
     selector->priv->columns = g_slist_append (selector->priv->columns,
                                               new_column);
 
-    new_column->priv->vbox = gtk_vbox_new (FALSE, 0);
+    new_column->priv->vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     gtk_box_pack_start (GTK_BOX (new_column->priv->vbox),
                         new_column->priv->panarea,
                         TRUE, TRUE, 0);
@@ -2445,7 +2446,8 @@ search_nearest_element (HildonPannableArea *panarea,
 
   /* we add this in order to check the nearest to the center of
      the visible area */
-  target_value = gtk_adjustment_get_value (adj) + adj->page_size/2;
+  target_value = gtk_adjustment_get_value (adj)
+               + gtk_adjustment_get_page_size (adj)/2;
 
   path = result_path = selected_rows->data;
   gtk_tree_view_get_background_area (tv, path, NULL, &rect);
@@ -2502,7 +2504,7 @@ hildon_touch_selector_scroll_to (HildonTouchSelectorColumn *column,
                                  GtkTreeView *tv,
                                  GtkTreePath *path)
 {
-  if (GTK_WIDGET_REALIZED (column->priv->panarea)) {
+  if (gtk_widget_get_realized (GTK_WIDGET (column->priv->panarea))) {
     GdkRectangle rect;
     gint y;
 
@@ -2711,8 +2713,9 @@ hildon_touch_selector_optimal_size_request      (HildonTouchSelector *selector,
   iter = selector->priv->columns;
 
   /* Default optimal values are the current ones */
-  gtk_widget_get_child_requisition (GTK_WIDGET (selector),
-                                    requisition);
+  gtk_widget_get_preferred_size (GTK_WIDGET (selector),
+                                 requisition,
+                                 NULL);
 
   if (iter == NULL) {
     height = requisition->height;
@@ -2731,7 +2734,7 @@ hildon_touch_selector_optimal_size_request      (HildonTouchSelector *selector,
     column = HILDON_TOUCH_SELECTOR_COLUMN (iter->data);
     child = GTK_WIDGET (column->priv->tree_view);
 
-    gtk_widget_get_child_requisition (child, &child_requisition);
+    gtk_widget_get_preferred_size (child, &child_requisition, NULL);
 
     height = MAX (height, child_requisition.height);
 

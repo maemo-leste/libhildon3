@@ -22,6 +22,7 @@
 #define                                         __HILDON_TOUCH_SELECTOR_H__
 
 #include                                        <gtk/gtk.h>
+#include                                        "hildon-gtk.h"
 #include                                        "hildon-touch-selector-column.h"
 
 G_BEGIN_DECLS
@@ -57,7 +58,7 @@ typedef gchar *(*HildonTouchSelectorPrintFunc)  (HildonTouchSelector * selector,
 
 struct                                          _HildonTouchSelector
 {
-  GtkVBox parent_instance;
+  GtkBox parent_instance;
 
   /*< private > */
   HildonTouchSelectorPrivate *priv;
@@ -65,7 +66,7 @@ struct                                          _HildonTouchSelector
 
 struct                                          _HildonTouchSelectorClass
 {
-  GtkVBoxClass parent_class;
+  GtkBoxClass parent_class;
 
   /* signals */
   void (*changed)                               (HildonTouchSelector *selector,

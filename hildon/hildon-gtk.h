@@ -31,6 +31,11 @@ typedef enum {
   HILDON_SIZE_AUTO             = (HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_AUTO_HEIGHT)
 } HildonSizeType;
 
+typedef enum
+{
+  HILDON_UI_MODE_NORMAL,
+  HILDON_UI_MODE_EDIT
+} HildonUIMode;
 
 GtkWidget *
 hildon_gtk_menu_new                             (void);
@@ -50,27 +55,27 @@ hildon_gtk_radio_button_new_from_widget         (HildonSizeType  size,
                                                  GtkRadioButton *radio_group_member);
 
 #ifdef MAEMO_GTK
-//GtkWidget *
-//hildon_gtk_tree_view_new                        (HildonUIMode mode);
+GtkWidget *
+hildon_gtk_tree_view_new                        (HildonUIMode mode);
 
-//GtkWidget *
-//hildon_gtk_tree_view_new_with_model             (HildonUIMode  mode,
-//                                                 GtkTreeModel *model);
+GtkWidget *
+hildon_gtk_tree_view_new_with_model             (HildonUIMode  mode,
+                                                 GtkTreeModel *model);
 
-//void
-//hildon_gtk_tree_view_set_ui_mode                (GtkTreeView  *treeview,
-//                                                 HildonUIMode  mode);
+void
+hildon_gtk_tree_view_set_ui_mode                (GtkTreeView  *treeview,
+                                                 HildonUIMode  mode);
 
-//GtkWidget *
-//hildon_gtk_icon_view_new                        (HildonUIMode mode);
+GtkWidget *
+hildon_gtk_icon_view_new                        (HildonUIMode mode);
 
-//GtkWidget *
-//hildon_gtk_icon_view_new_with_model             (HildonUIMode  mode,
-//                                                 GtkTreeModel *model);
+GtkWidget *
+hildon_gtk_icon_view_new_with_model             (HildonUIMode  mode,
+                                                 GtkTreeModel *model);
 
-//void
-//hildon_gtk_icon_view_set_ui_mode                (GtkIconView  *iconview,
-//                                                 HildonUIMode  mode);
+void
+hildon_gtk_icon_view_set_ui_mode                (GtkIconView  *iconview,
+                                                 HildonUIMode  mode);
 #endif /* MAEMO_GTK */
 
 void
