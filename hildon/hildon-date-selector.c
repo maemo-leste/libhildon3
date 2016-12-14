@@ -248,12 +248,10 @@ static void
 hildon_date_selector_class_init (HildonDateSelectorClass * class)
 {
   GObjectClass *gobject_class;
-  GtkObjectClass *object_class;
   GtkWidgetClass *widget_class;
   GtkContainerClass *container_class;
 
   gobject_class = (GObjectClass *) class;
-  object_class = (GtkObjectClass *) class;
   widget_class = (GtkWidgetClass *) class;
   container_class = (GtkContainerClass *) class;
 
@@ -295,7 +293,7 @@ hildon_date_selector_class_init (HildonDateSelectorClass * class)
 
   /* signals */
 
-  g_type_class_add_private (object_class, sizeof (HildonDateSelectorPrivate));
+  g_type_class_add_private (class, sizeof (HildonDateSelectorPrivate));
 }
 
 static void
