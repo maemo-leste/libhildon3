@@ -144,12 +144,10 @@ static void
 hildon_time_selector_class_init (HildonTimeSelectorClass * class)
 {
   GObjectClass *gobject_class;
-  GtkObjectClass *object_class;
   GtkWidgetClass *widget_class;
   GtkContainerClass *container_class;
 
   gobject_class = (GObjectClass *) class;
-  object_class = (GtkObjectClass *) class;
   widget_class = (GtkWidgetClass *) class;
   container_class = (GtkContainerClass *) class;
 
@@ -190,7 +188,7 @@ hildon_time_selector_class_init (HildonTimeSelectorClass * class)
 
   /* signals */
 
-  g_type_class_add_private (object_class, sizeof (HildonTimeSelectorPrivate));
+  g_type_class_add_private (class, sizeof (HildonTimeSelectorPrivate));
 }
 
 /* FIXME: the constructor was required because as we need the initial values
@@ -253,7 +251,7 @@ hildon_time_selector_init (HildonTimeSelector * selector)
 {
   selector->priv = HILDON_TIME_SELECTOR_GET_PRIVATE (selector);
 
-  GTK_WIDGET_SET_FLAGS (GTK_WIDGET (selector), GTK_NO_WINDOW);
+  gtk_widget_set_has_window (GTK_WIDGET (selector), FALSE);
   gtk_widget_set_redraw_on_allocate (GTK_WIDGET (selector), FALSE);
 
   hildon_touch_selector_set_print_func (HILDON_TOUCH_SELECTOR (selector),
