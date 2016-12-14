@@ -901,11 +901,11 @@ hildon_controlbar_paint                         (HildonControlbar *self)
         end_x = block_width * i + (i * block_remains) / block_max;
         current_width = end_x - start_x;
 
-        gtk_paint_box (widget->style, gtk_widget_get_window (widget), state,
+        /*gtk_paint_box (widget->style, gtk_widget_get_window (widget), state,
                 (i <= block_count) ? GTK_SHADOW_IN : GTK_SHADOW_OUT,
                 NULL, widget, "hildon_block",
                 block_x, block_y, current_width,
-                block_height);
+                block_height);/
 
         /* We keep the block_x separate because of the
            'separatingpixels' */
