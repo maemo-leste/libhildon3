@@ -474,12 +474,11 @@ hildon_time_picker_init                         (HildonTimePicker *picker)
     /* This dialog isn't modal */
     gtk_window_set_modal (GTK_WINDOW (dialog), FALSE);
     /* And final dialog packing */
-    gtk_dialog_set_has_separator (dialog, FALSE);
     gtk_dialog_add_button (dialog, _("wdgt_bd_done"),
             GTK_RESPONSE_OK);
 
     gtk_container_add (GTK_CONTAINER (maintocenter), GTK_WIDGET(table));
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), maintocenter, TRUE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), maintocenter, TRUE, FALSE, 0);
 
     /* Set default time to current time */
     stamp = time (NULL);
@@ -555,7 +554,7 @@ hildon_time_picker_realize                      (GtkWidget *widget)
     GTK_WIDGET_CLASS (parent_class)->realize(widget);
 
     /* We only want the border for the dialog. */
-    gdk_window_set_decorations (widget->window, GDK_DECOR_BORDER);
+    gdk_window_set_decorations (gtk_widget_get_window(widget), GDK_DECOR_BORDER);
 }
 
 static void
@@ -699,7 +698,7 @@ hildon_time_picker_event_box_focus_in           (GtkWidget *widget,
                                                  gpointer unused)
 {
     /* Draw the widget in selected state so focus shows clearly. */
-    gtk_widget_set_state (widget, GTK_STATE_SELECTED);
+    gtk_widget_set_state_flags (widget, GTK_STATE_FLAG_SELECTED, TRUE);
     return FALSE;
 }
 
@@ -709,7 +708,7 @@ hildon_time_picker_event_box_focus_out          (GtkWidget *widget,
                                                  gpointer unused)
 {
     /* Draw the widget in normal state */
-    gtk_widget_set_state( widget, GTK_STATE_NORMAL );
+    gtk_widget_set_state_flags (widget, GTK_STATE_FLAG_NORMAL, TRUE);
     return FALSE;
 }
 
@@ -751,17 +750,17 @@ hildon_time_picker_event_box_key_press          (GtkWidget *widget,
     /* Handle keypresses in hour/minute/AMPM fields */
     switch (event->keyval)
     {
-        case GDK_Up:
-        case GDK_Down:
+        case GDK_KEY_Up:
+        case GDK_KEY_Down:
             if (group != NULL)
             {
-                gint button = event->keyval == GDK_Up ? BUTTON_UP : BUTTON_DOWN;
+                gint button = event->keyval == GDK_KEY_Up ? BUTTON_UP : BUTTON_DOWN;
 
                 if (group->buttons[button] != NULL)
                 {
                     /* Fake a button up/down press */
                     hildon_time_picker_arrow_press (group->buttons[button], NULL, picker);
-                    gtk_widget_set_state (group->buttons[button], GTK_STATE_SELECTED);
+                    gtk_widget_set_state_flags (group->buttons[button], GTK_STATE_FLAG_SELECTED, TRUE);
                 }
                 else
                 {
@@ -772,7 +771,7 @@ hildon_time_picker_event_box_key_press          (GtkWidget *widget,
             }
             return TRUE;
 
-        case GDK_Left:
+        case GDK_KEY_Left:
             /* If we're in leftmost field, stop this keypress signal.
                Otherwise let the default key handler move focus to field in left. */
             if (priv->show_ampm && priv->ampm_left)
@@ -789,7 +788,7 @@ hildon_time_picker_event_box_key_press          (GtkWidget *widget,
             }
             break;
 
-        case GDK_Right:
+        case GDK_KEY_Right:
             /* If we're in rightmost field, stop this keypress signal.
                Otherwise let the default key handler move focus to field in right. */
             if (priv->show_ampm && !priv->ampm_left)
@@ -806,11 +805,11 @@ hildon_time_picker_event_box_key_press          (GtkWidget *widget,
             }
             break;
 
-        case GDK_Escape:
+        case GDK_KEY_Escape:
             gtk_dialog_response (GTK_DIALOG (picker), GTK_RESPONSE_CANCEL);
             return TRUE;
 
-        case GDK_Return:
+        case GDK_KEY_Return:
             gtk_dialog_response (GTK_DIALOG (picker), GTK_RESPONSE_OK);
             return TRUE;
     }
@@ -832,18 +831,18 @@ hildon_time_picker_event_box_key_release        (GtkWidget *widget,
     /* Fake a button release if in key-press handler we faked a button press. */
     switch( event->keyval )
     {
-        case GDK_Up:
-        case GDK_Down:
+        case GDK_KEY_Up:
+        case GDK_KEY_Down:
             group_idx = hildon_time_picker_lookup_eventbox_group (picker, widget);
             if (group_idx >= 0)
             {
-                gint button = event->keyval == GDK_Up ? BUTTON_UP : BUTTON_DOWN;
+                gint button = event->keyval == GDK_KEY_Up ? BUTTON_UP : BUTTON_DOWN;
 
                 group = &priv->widgets[group_idx];
                 if (group->buttons[button] != NULL)
                 {
                     /* Fake a button up/down press */
-                    gtk_widget_set_state (group->buttons[button], GTK_STATE_NORMAL);
+                    gtk_widget_set_state_flags (group->buttons[button], GTK_STATE_FLAG_NORMAL, TRUE);
                     hildon_time_picker_arrow_release (group->buttons[button], NULL, picker);
                 }
             }
