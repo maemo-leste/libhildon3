@@ -222,6 +222,16 @@ static gboolean
 hildon_time_editor_icon_clicked                 (GtkWidget *widget,
                                                  gpointer data);
 
+static void
+hildon_time_editor_get_preferred_width          (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_time_editor_get_preferred_height         (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
+
 static void     
 hildon_time_editor_size_request                 (GtkWidget *widget,
                                                  GtkRequisition *requisition);
@@ -243,11 +253,11 @@ static gboolean
 hildon_time_editor_check_locale                 (HildonTimeEditor *editor);
 
 #ifdef MAEMO_GTK 
-static void 
+/*static void 
 hildon_time_editor_tap_and_hold_setup           (GtkWidget *widget,
                                                  GtkWidget *menu,
                                                  GtkCallback func,
-                                                 GtkWidgetTapAndHoldFlags flags);
+                                                 GtkWidgetTapAndHoldFlags flags);*/
 #endif
 
 static void
@@ -370,7 +380,8 @@ hildon_time_editor_class_init                   (HildonTimeEditorClass *editor_c
 
     object_class->get_property                  = hildon_time_editor_get_property;
     object_class->set_property                  = hildon_time_editor_set_property;
-    widget_class->size_request                  = hildon_time_editor_size_request;
+    widget_class->get_preferred_width           = hildon_time_editor_get_preferred_width;
+    widget_class->get_preferred_height          = hildon_time_editor_get_preferred_height;
     widget_class->size_allocate                 = hildon_time_editor_size_allocate;
     widget_class->focus                         = hildon_time_editor_focus;
     widget_class->destroy                       = hildon_time_editor_destroy;
@@ -468,26 +479,26 @@ hildon_time_editor_class_init                   (HildonTimeEditorClass *editor_c
 }
 
 #ifdef MAEMO_GTK 
-static void 
-hildon_time_editor_tap_and_hold_setup           (GtkWidget *widget,
-                                                 GtkWidget *menu,
-                                                 GtkCallback func,
-                                                 GtkWidgetTapAndHoldFlags flags)
-{
-    HildonTimeEditorPrivate *priv = HILDON_TIME_EDITOR_GET_PRIVATE (widget);
-    gint i;
+//static void 
+//hildon_time_editor_tap_and_hold_setup           (GtkWidget *widget,
+//                                                 GtkWidget *menu,
+//                                                 GtkCallback func,
+//                                                 GtkWidgetTapAndHoldFlags flags)
+//{
+//    HildonTimeEditorPrivate *priv = HILDON_TIME_EDITOR_GET_PRIVATE (widget);
+//    gint i;
 
     /* Forward this tap_and_hold_setup signal to all our child widgets */
-    for (i = 0; i < ENTRY_COUNT; i++)
-    {
-        gtk_widget_tap_and_hold_setup (priv->entries[i], menu, func,
-                GTK_TAP_AND_HOLD_NO_SIGNALS);
-    }
-    gtk_widget_tap_and_hold_setup (priv->ampm_button, menu, func,
-            GTK_TAP_AND_HOLD_NO_SIGNALS);
-    gtk_widget_tap_and_hold_setup (priv->iconbutton, menu, func,
-            GTK_TAP_AND_HOLD_NONE);
-}
+//    for (i = 0; i < ENTRY_COUNT; i++)
+//    {
+//        gtk_widget_tap_and_hold_setup (priv->entries[i], menu, func,
+//                GTK_TAP_AND_HOLD_NO_SIGNALS);
+//    }
+//    gtk_widget_tap_and_hold_setup (priv->ampm_button, menu, func,
+//            GTK_TAP_AND_HOLD_NO_SIGNALS);
+//    gtk_widget_tap_and_hold_setup (priv->iconbutton, menu, func,
+//            GTK_TAP_AND_HOLD_NONE);
+//}
 #endif
 
 static void 
@@ -613,9 +624,9 @@ hildon_time_editor_init                         (HildonTimeEditor *editor)
     gtk_widget_pop_composite_child ();
 
 #ifdef MAEMO_GTK 
-    g_signal_connect (editor, "tap-and-hold-setup",
+/*    g_signal_connect (editor, "tap-and-hold-setup",
                       G_CALLBACK (hildon_time_editor_tap_and_hold_setup),
-                      NULL);
+                      NULL);*/
 #endif
 
 }
@@ -1700,6 +1711,30 @@ hildon_time_editor_icon_clicked                 (GtkWidget *widget,
     return FALSE;
 }
 
+static void
+hildon_time_editor_get_preferred_width          (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_time_editor_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_time_editor_get_preferred_height         (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_time_editor_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
+
 static void 
 hildon_time_editor_size_request                 (GtkWidget *widget,
                                                  GtkRequisition *requisition)
@@ -1740,7 +1775,7 @@ hildon_time_editor_size_allocate                (GtkWidget *widget,
     g_assert (priv);
 
     rtl = (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL);
-    widget->allocation = *allocation;
+    gtk_widget_set_allocation (widget, allocation);
     gtk_widget_get_preferred_size (widget, &max_req, NULL);
 
     /* Center horizontally */
@@ -1780,17 +1815,17 @@ hildon_time_editor_size_allocate                (GtkWidget *widget,
     /* FIXME: ugly way to move labels up. They just don't seem move up
        otherwise. This is likely because we force the editor to be
        smaller than it otherwise would be. */
-    alloc = priv->ampm_label->allocation;
+    gtk_widget_get_allocation (priv->ampm_label, &alloc);
     alloc.y = allocation->y - 2;
     alloc.height = max_req.height + 2;
     gtk_widget_size_allocate (priv->ampm_label, &alloc);
 
-    alloc = priv->hm_label->allocation;
+    gtk_widget_get_allocation (priv->hm_label, &alloc);
     alloc.y = allocation->y - 2;
     alloc.height = max_req.height + 2;
     gtk_widget_size_allocate (priv->hm_label, &alloc);
 
-    alloc = priv->sec_label->allocation;
+    gtk_widget_get_allocation (priv->sec_label, &alloc);
     alloc.y = allocation->y - 2;
     alloc.height = max_req.height + 2;
     gtk_widget_size_allocate (priv->sec_label, &alloc);
