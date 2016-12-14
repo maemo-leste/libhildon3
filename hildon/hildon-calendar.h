@@ -94,8 +94,8 @@ struct                                          _HildonCalendar
     HildonCalendarDisplayOptions  display_flags;
     GdkColor marked_date_color[31];
 
-    GdkGC *gc;
-    GdkGC *xor_gc;
+    cairo_t *gc;
+    cairo_t *xor_gc;
 
     gint focus_row;
     gint focus_col;
