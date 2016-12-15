@@ -233,11 +233,9 @@ create_contents                                 (HildonSetPasswordDialog *dialog
     /* Size group for labels */
     group = GTK_SIZE_GROUP (gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL));
 
-    gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
-
     /* Setup and pack domain label */
     priv->message_label = GTK_LABEL (gtk_label_new (NULL));
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (dialog)->vbox),
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
             GTK_WIDGET(priv->message_label), FALSE, FALSE, 0);
     gtk_widget_show (GTK_WIDGET (priv->message_label));
 
@@ -249,12 +247,12 @@ create_contents                                 (HildonSetPasswordDialog *dialog
         /* Setup checkbox to enable/disable password protection */
 	priv->checkbox = hildon_check_button_new (HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT);
 	gtk_button_set_label (GTK_BUTTON (priv->checkbox), _(HILDON_SET_MODIFY_PASSWORD_DIALOG_LABEL));
-        gtk_box_pack_start (GTK_BOX (GTK_DIALOG (dialog)->vbox),
+        gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
                 priv->checkbox, TRUE, TRUE, 0);
         gtk_widget_show (priv->checkbox);
         hildon_check_button_set_active (HILDON_CHECK_BUTTON (priv->checkbox),
                 TRUE);
-        gtk_signal_connect (GTK_OBJECT (priv->checkbox), "toggled",
+        g_signal_connect (GTK_WIDGET (priv->checkbox), "toggled",
                 G_CALLBACK (hildon_checkbox_toggled), dialog);
 
         /* Setup appropriate response handler */
@@ -279,10 +277,7 @@ create_contents                                 (HildonSetPasswordDialog *dialog
 	atk_object_set_name(atk_aux, "Old Passwd");
       }
     
-
-#ifdef MAEMO_GTK
-    g_object_set (priv->pwd1st_entry, "hildon-input-mode", HILDON_GTK_INPUT_MODE_FULL, NULL);
-#endif
+    g_object_set (priv->pwd1st_entry, "input-purpose", GTK_INPUT_PURPOSE_PASSWORD, NULL);
 
     gtk_entry_set_visibility (GTK_ENTRY(priv->pwd1st_entry), FALSE);
     gtk_widget_show (priv->pwd1st_entry);
@@ -293,7 +288,7 @@ create_contents                                 (HildonSetPasswordDialog *dialog
 
     hildon_caption_set_separator (HILDON_CAPTION(priv->pwd1st_caption), "");
     gtk_entry_set_visibility (GTK_ENTRY (priv->pwd1st_entry), FALSE);
-    gtk_box_pack_start (GTK_BOX(GTK_DIALOG (dialog)->vbox),
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
             priv->pwd1st_caption, TRUE, TRUE, 0);
     gtk_widget_show (priv->pwd1st_caption);
 
@@ -304,10 +299,7 @@ create_contents                                 (HildonSetPasswordDialog *dialog
 	atk_object_set_name(atk_aux, "New Passwd");
       }
 
-
-#ifdef MAEMO_GTK
-    g_object_set (priv->pwd2nd_entry, "hildon-input-mode", HILDON_GTK_INPUT_MODE_FULL, NULL);
-#endif
+    g_object_set (priv->pwd2nd_entry, "input-purpose", GTK_INPUT_PURPOSE_PASSWORD, NULL);
 
     gtk_widget_show (priv->pwd2nd_entry);
     priv->pwd2nd_caption = hildon_caption_new (group,
@@ -316,7 +308,7 @@ create_contents                                 (HildonSetPasswordDialog *dialog
             NULL, HILDON_CAPTION_OPTIONAL);
     hildon_caption_set_separator (HILDON_CAPTION (priv->pwd2nd_caption), "");
     gtk_entry_set_visibility (GTK_ENTRY (priv->pwd2nd_entry), FALSE);
-    gtk_box_pack_start (GTK_BOX(GTK_DIALOG (dialog)->vbox),
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
             priv->pwd2nd_caption, TRUE, TRUE, 0);
     gtk_widget_show (priv->pwd2nd_caption);
 
@@ -331,8 +323,8 @@ create_contents                                 (HildonSetPasswordDialog *dialog
                                 ? HILDON_SET_MODIFY_PASSWORD_DIALOG_OK
                                 : HILDON_SET_PASSWORD_DIALOG_OK), GTK_RESPONSE_OK);
 
-    gtk_widget_show_all (GTK_DIALOG (dialog)->vbox);
-    gtk_widget_show_all (GTK_DIALOG (dialog)->action_area);
+    gtk_widget_show_all (gtk_dialog_get_content_area (GTK_DIALOG (dialog)));
+    gtk_widget_show_all (gtk_dialog_get_action_area (GTK_DIALOG (dialog)));
  
     /* Ensure group is freed when all its contents have been removed */
     g_object_unref (group);
@@ -409,8 +401,8 @@ hildon_set_password_response_change             (GtkDialog *dialog,
 {
     GtkEntry *pwd1st_entry;
     GtkEntry *pwd2nd_entry;
-    gchar *text1;
-    gchar *text2;
+    const gchar *text1;
+    const gchar *text2;
     HildonNote *note;
     gint i;
     HildonSetPasswordDialogPrivate *priv;
@@ -423,8 +415,8 @@ hildon_set_password_response_change             (GtkDialog *dialog,
             (GTK_BIN (priv->pwd1st_caption)));
     pwd2nd_entry = GTK_ENTRY (gtk_bin_get_child
             (GTK_BIN (priv->pwd2nd_caption)));
-    text1 = GTK_ENTRY (pwd1st_entry)->text;
-    text2 = GTK_ENTRY (pwd2nd_entry)->text;
+    text1 = gtk_entry_get_text (GTK_ENTRY (pwd1st_entry));
+    text2 = gtk_entry_get_text (GTK_ENTRY (pwd2nd_entry));
 
     /* User accepted the dialog */
     if (arg1 == GTK_RESPONSE_OK) {
@@ -517,8 +509,8 @@ hildon_set_password_response_set                (GtkDialog *dialog,
 {
     GtkEntry *pwd1st_entry;
     GtkEntry *pwd2nd_entry;
-    gchar *text1;
-    gchar *text2;
+    const gchar *text1;
+    const gchar *text2;
 
     HildonSetPasswordDialogPrivate *priv;
 
@@ -532,8 +524,8 @@ hildon_set_password_response_set                (GtkDialog *dialog,
     pwd2nd_entry = GTK_ENTRY (gtk_bin_get_child
             (GTK_BIN (priv->pwd2nd_caption)));
 
-    text1 = GTK_ENTRY (pwd1st_entry)->text;
-    text2 = GTK_ENTRY (pwd2nd_entry)->text;
+    text1 = gtk_entry_get_text (GTK_ENTRY (pwd1st_entry));
+    text2 = gtk_entry_get_text (GTK_ENTRY (pwd2nd_entry));
 
     if (arg1 == GTK_RESPONSE_OK) {
         /* User provided something for password? */
@@ -696,7 +688,7 @@ hildon_set_password_dialog_get_password         (HildonSetPasswordDialog *dialog
     priv = HILDON_SET_PASSWORD_DIALOG_GET_PRIVATE (dialog);
     g_assert (priv);
 
-    return GTK_ENTRY (priv->pwd1st_entry)->text;
+    return gtk_entry_get_text (GTK_ENTRY (priv->pwd1st_entry));
 }
 
 /**
