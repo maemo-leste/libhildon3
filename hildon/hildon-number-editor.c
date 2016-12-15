@@ -93,6 +93,16 @@ hildon_number_editor_entry_changed              (GtkWidget *widget,
                                                  gpointer data);
 
 static void
+hildon_number_editor_get_preferred_width        (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_number_editor_get_preferred_height       (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
+
+static void
 hildon_number_editor_size_request               (GtkWidget *widget,
                                                  GtkRequisition *requisition);
 
@@ -141,7 +151,7 @@ hildon_number_editor_forall                     (GtkContainer *container,
                                                  gpointer callback_data);
 
 static void
-hildon_number_editor_destroy                    (GtkObject *self);
+hildon_number_editor_destroy                    (GtkWidget *widget);
 
 static gboolean
 hildon_number_editor_start_timer                (HildonNumberEditor *editor);
@@ -232,16 +242,17 @@ hildon_number_editor_class_init                 (HildonNumberEditorClass *editor
 
     parent_class = g_type_class_peek_parent (editor_class);
 
-    widget_class->size_request              = hildon_number_editor_size_request;
+    widget_class->get_preferred_width       = hildon_number_editor_get_preferred_width;
+    widget_class->get_preferred_height      = hildon_number_editor_get_preferred_height;
     widget_class->size_allocate             = hildon_number_editor_size_allocate;
     widget_class->focus                     = hildon_number_editor_focus;
+    widget_class->destroy                   = hildon_number_editor_destroy;
 
     editor_class->range_error = hildon_number_editor_range_error;
 
     /* Because we derived our widget from GtkContainer, we should override 
        forall method */
     container_class->forall                 = hildon_number_editor_forall;
-    GTK_OBJECT_CLASS(editor_class)->destroy = hildon_number_editor_destroy;
     gobject_class->finalize                 = hildon_number_editor_finalize;
     gobject_class->set_property             = hildon_number_editor_set_property;
     gobject_class->get_property             = hildon_number_editor_get_property;
@@ -289,11 +300,11 @@ hildon_number_editor_forall                     (GtkContainer *container,
 }
 
 static void
-hildon_number_editor_destroy                    (GtkObject *self)
+hildon_number_editor_destroy                    (GtkWidget *widget)
 {
     HildonNumberEditorPrivate *priv;
 
-    priv = HILDON_NUMBER_EDITOR_GET_PRIVATE (self);
+    priv = HILDON_NUMBER_EDITOR_GET_PRIVATE (widget);
     g_assert (priv);
 
     /* Free child widgets */
@@ -313,8 +324,8 @@ hildon_number_editor_destroy                    (GtkObject *self)
         priv->plus = NULL;
     }
 
-    if (GTK_OBJECT_CLASS (parent_class)->destroy)
-        GTK_OBJECT_CLASS (parent_class)->destroy(self);
+    if (GTK_WIDGET_CLASS (parent_class)->destroy)
+        GTK_WIDGET_CLASS (parent_class)->destroy(widget);
 }
 
 static void
@@ -356,7 +367,7 @@ hildon_number_editor_init                       (HildonNumberEditor *editor)
     priv = HILDON_NUMBER_EDITOR_GET_PRIVATE (editor);
     g_assert (priv);
 
-    GTK_WIDGET_SET_FLAGS (GTK_WIDGET (editor), GTK_NO_WINDOW);
+    gtk_widget_set_has_window (GTK_WIDGET(editor), FALSE);
 
     /* Create child widgets */
     priv->num_entry = gtk_entry_new ();
@@ -369,8 +380,8 @@ hildon_number_editor_init                       (HildonNumberEditor *editor)
     gtk_widget_set_size_request (priv->plus, BUTTON_WIDTH, BUTTON_HEIGHT);
     gtk_entry_set_alignment (GTK_ENTRY(priv->num_entry), 1);
 
-    GTK_WIDGET_UNSET_FLAGS (priv->minus, GTK_CAN_FOCUS);
-    GTK_WIDGET_UNSET_FLAGS (priv->plus, GTK_CAN_FOCUS);
+    gtk_widget_set_can_focus (priv->minus, FALSE);
+    gtk_widget_set_can_focus (priv->plus, FALSE);
 
     priv->button_event_id = 0;
     priv->select_all_idle_id = 0;
@@ -380,50 +391,47 @@ hildon_number_editor_init                       (HildonNumberEditor *editor)
     gtk_widget_set_parent (priv->plus, GTK_WIDGET (editor));
 
     /* Connect child widget signals */
-    g_signal_connect (GTK_OBJECT (priv->num_entry), "changed",
+    g_signal_connect (GTK_WIDGET (priv->num_entry), "changed",
             G_CALLBACK (hildon_number_editor_entry_changed),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->num_entry), "focus-out-event",
+    g_signal_connect (GTK_WIDGET (priv->num_entry), "focus-out-event",
             G_CALLBACK (hildon_number_editor_entry_focusout),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->num_entry), "key-press-event",
+    g_signal_connect (GTK_WIDGET (priv->num_entry), "key-press-event",
             G_CALLBACK (hildon_number_editor_entry_keypress),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->num_entry), "button-release-event",
+    g_signal_connect (GTK_WIDGET (priv->num_entry), "button-release-event",
             G_CALLBACK (hildon_number_editor_entry_button_released),
             NULL);
 
-    g_signal_connect (GTK_OBJECT (priv->minus), "button-press-event",
+    g_signal_connect (GTK_WIDGET (priv->minus), "button-press-event",
             G_CALLBACK (hildon_number_editor_button_pressed),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->plus), "button-press-event",
+    g_signal_connect (GTK_WIDGET (priv->plus), "button-press-event",
             G_CALLBACK (hildon_number_editor_button_pressed),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->minus), "button-release-event",
+    g_signal_connect (GTK_WIDGET (priv->minus), "button-release-event",
             G_CALLBACK (hildon_number_editor_button_released),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->plus), "button-release-event",
+    g_signal_connect (GTK_WIDGET (priv->plus), "button-release-event",
             G_CALLBACK (hildon_number_editor_button_released),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->minus), "leave-notify-event",
+    g_signal_connect (GTK_WIDGET (priv->minus), "leave-notify-event",
             G_CALLBACK(hildon_number_editor_button_released),
             editor);
 
-    g_signal_connect (GTK_OBJECT (priv->plus), "leave-notify-event",
+    g_signal_connect (GTK_WIDGET (priv->plus), "leave-notify-event",
             G_CALLBACK (hildon_number_editor_button_released),
             editor);
 
-#ifdef MAEMO_GTK 
-    g_object_set (G_OBJECT (priv->num_entry),
-            "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
-#endif
+    gtk_entry_set_input_purpose (GTK_ENTRY (priv->num_entry), GTK_INPUT_PURPOSE_DIGITS);
 
     gtk_widget_show (priv->num_entry);
     gtk_widget_show (priv->minus);
@@ -676,6 +684,30 @@ hildon_number_editor_entry_changed              (GtkWidget *widget,
 }
 
 static void
+hildon_number_editor_get_preferred_width        (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_number_editor_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_number_editor_get_preferred_height       (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_number_editor_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
+
+static void
 hildon_number_editor_size_request               (GtkWidget *widget,
                                                  GtkRequisition *requisition)
 {
@@ -688,13 +720,13 @@ hildon_number_editor_size_request               (GtkWidget *widget,
     g_assert (priv);
 
     /* Requested size is size of all child widgets plus border space */
-    gtk_widget_size_request (priv->minus, &req);
+    gtk_widget_get_preferred_size (priv->minus, &req, NULL);
     requisition->width = req.width;
 
-    gtk_widget_size_request (priv->num_entry, &req);
+    gtk_widget_get_preferred_size (priv->num_entry, &req, NULL);
     requisition->width += req.width;
 
-    gtk_widget_size_request (priv->plus, &req);
+    gtk_widget_get_preferred_size (priv->plus, &req, NULL);
     requisition->width += req.width;
 
     requisition->width += HILDON_MARGIN_DEFAULT * 2;
@@ -711,7 +743,7 @@ set_widget_allocation                           (GtkWidget *widget,
 {
     GtkRequisition child_requisition;
 
-    gtk_widget_get_child_requisition (widget, &child_requisition);
+    gtk_widget_get_preferred_size (widget, &child_requisition, NULL);
 
     /* Fit to widget width */
     if (allocation->width + allocation->x > alloc->x + child_requisition.width)
@@ -735,39 +767,46 @@ hildon_number_editor_size_allocate              (GtkWidget *widget,
     HildonNumberEditor *editor;
     HildonNumberEditorPrivate *priv;
     GtkAllocation alloc;
+    GtkStyleContext *context;
+    gint xthickness, ythickness;
 
     editor = HILDON_NUMBER_EDITOR (widget);
     priv = HILDON_NUMBER_EDITOR_GET_PRIVATE (editor);
     g_assert (priv);
 
-    widget->allocation = *allocation;
+    gtk_widget_set_allocation (widget, allocation);
+    context = gtk_widget_get_style_context(widget);
+    gtk_style_context_get(context, gtk_style_context_get_state(context),
+                          "xthickness", &xthickness,
+                          "ythickness", &ythickness,
+                          NULL);
 
     /* Add upper border */
-    alloc.y = widget->allocation.y + widget->style->ythickness;
+    alloc.y = allocation->y + ythickness;
 
     /* Fix height */
-    if (widget->allocation.height > NUMBER_EDITOR_HEIGHT)
+    if (allocation->height > NUMBER_EDITOR_HEIGHT)
     {
-        alloc.height = NUMBER_EDITOR_HEIGHT - widget->style->ythickness * 2;
-        alloc.y += (widget->allocation.height - NUMBER_EDITOR_HEIGHT) / 2;
+        alloc.height = NUMBER_EDITOR_HEIGHT - ythickness * 2;
+        alloc.y += (allocation->height - NUMBER_EDITOR_HEIGHT) / 2;
     }
     else
-        alloc.height = widget->allocation.height - widget->style->ythickness * 2;
+        alloc.height = allocation->height - ythickness * 2;
 
     if (alloc.height < 0)
         alloc.height = 0;
 
     /* Add left border */
-    alloc.x = allocation->x + widget->style->xthickness;
+    alloc.x = allocation->x + xthickness;
 
     /* Allocate positions for widgets (left-to-right) */
-    set_widget_allocation(priv->minus, &alloc, &widget->allocation);
+    set_widget_allocation(priv->minus, &alloc, allocation);
     alloc.x += HILDON_MARGIN_DEFAULT;
 
-    set_widget_allocation(priv->num_entry, &alloc, &widget->allocation);
+    set_widget_allocation(priv->num_entry, &alloc, allocation);
     alloc.x += HILDON_MARGIN_DEFAULT;
 
-    set_widget_allocation(priv->plus, &alloc, &widget->allocation);
+    set_widget_allocation(priv->plus, &alloc, allocation);
 }
 
 static gboolean
@@ -813,7 +852,7 @@ hildon_number_editor_entry_keypress             (GtkWidget *widget,
 
     switch (event->keyval)
     {
-        case GDK_Left:
+        case GDK_KEY_Left:
             /* If the cursor is on the left, try to decrement */
             if (cursor_pos == 0) {
                 change_numbers (HILDON_NUMBER_EDITOR (data), -1);
@@ -821,7 +860,7 @@ hildon_number_editor_entry_keypress             (GtkWidget *widget,
             }
             break;
 
-        case GDK_Right:
+        case GDK_KEY_Right:
             /* If the cursor is on the right, try to increment */
             if (cursor_pos >= g_utf8_strlen(gtk_entry_get_text (GTK_ENTRY (widget)), -1))
             {
