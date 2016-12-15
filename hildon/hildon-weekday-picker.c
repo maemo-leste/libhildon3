@@ -101,6 +101,16 @@ static gboolean
 hildon_weekday_picker_focus                     (GtkWidget *widget,
                                                  GtkDirectionType direction);
 static void
+hildon_weekday_picker_get_preferred_width       (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_weekday_picker_get_preferred_height      (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
+
+static void
 hildon_weekday_picker_size_request              (GtkWidget *widget,
                                                  GtkRequisition *requisition);
 static void
@@ -110,7 +120,7 @@ hildon_weekday_picker_forall                    (GtkContainer *container,
                                                  gpointer callback_data);
 
 static void
-hildon_weekday_picker_destroy                   (GtkObject *self);
+hildon_weekday_picker_destroy                   (GtkWidget *widget);
 
 static void
 button_toggle                                   (GtkToggleButton *togglebutton, 
@@ -169,11 +179,12 @@ hildon_weekday_picker_class_init                (HildonWeekdayPickerClass *picke
             sizeof (HildonWeekdayPickerPrivate));
 
     /* Override virtual methods */
-    widget_class->size_request                  = hildon_weekday_picker_size_request;
+    widget_class->get_preferred_width           = hildon_weekday_picker_get_preferred_width;
+    widget_class->get_preferred_height          = hildon_weekday_picker_get_preferred_height;
     widget_class->size_allocate                 = hildon_weekday_picker_size_allocate;
     widget_class->focus                         = hildon_weekday_picker_focus;
     container_class->forall                     = hildon_weekday_picker_forall;
-    GTK_OBJECT_CLASS (picker_class)->destroy    = hildon_weekday_picker_destroy;
+    widget_class->destroy                       = hildon_weekday_picker_destroy;
 
     /* Create a signal for reporting user actions */
     signals [SELECTION_CHANGED_SIGNAL] = g_signal_new ("selection_changed",
@@ -241,7 +252,7 @@ hildon_weekday_picker_init                      (HildonWeekdayPicker *picker)
         gtk_widget_show (priv->buttons[i]);
     }
 
-    GTK_WIDGET_SET_FLAGS (picker, GTK_NO_WINDOW);
+    gtk_widget_set_has_window (GTK_WIDGET (picker), FALSE);
 
     g_object_unref (sgroup);
 }
@@ -287,12 +298,12 @@ hildon_weekday_picker_forall                    (GtkContainer *container,
 }
 
 static void 
-hildon_weekday_picker_destroy                   (GtkObject *self)
+hildon_weekday_picker_destroy                   (GtkWidget *widget)
 {
     HildonWeekdayPickerPrivate *priv;
     gint i;
 
-    priv = HILDON_WEEKDAY_PICKER_GET_PRIVATE (self);
+    priv = HILDON_WEEKDAY_PICKER_GET_PRIVATE (widget);
     g_assert (priv);
 
     /* Destroy internal children... */
@@ -305,9 +316,33 @@ hildon_weekday_picker_destroy                   (GtkObject *self)
     }
 
     /* ... and chain to parent. */
-    if (GTK_OBJECT_CLASS (parent_class)->destroy)
-        GTK_OBJECT_CLASS (parent_class)->destroy (self);
+    if (GTK_WIDGET_CLASS (parent_class)->destroy)
+        GTK_WIDGET_CLASS (parent_class)->destroy (widget);
 
+}
+
+static void
+hildon_weekday_picker_get_preferred_width       (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_weekday_picker_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_weekday_picker_get_preferred_height      (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_weekday_picker_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
 }
 
 static void 
@@ -329,7 +364,7 @@ hildon_weekday_picker_size_request              (GtkWidget *widget,
     /* Request an area that is as wide as all of the buttons
        together and tall enough to hold heightest button */
     for (i = 1; i <= 7; ++i) {
-        gtk_widget_size_request (priv->buttons [i], &req);
+        gtk_widget_get_preferred_size (priv->buttons [i], &req, NULL);
         requisition->width += req.width;
         if (req.height > requisition->height)
             requisition->height = req.height;
@@ -361,7 +396,7 @@ hildon_weekday_picker_size_allocate             (GtkWidget *widget,
     g_assert (priv);
 
     header_x = allocation->x;
-    widget->allocation = *allocation;
+    gtk_widget_set_allocation (widget, allocation);
 
     if (direction == GTK_TEXT_DIR_LTR || direction == GTK_TEXT_DIR_NONE)
         sval = 1;
@@ -370,7 +405,7 @@ hildon_weekday_picker_size_allocate             (GtkWidget *widget,
 
     /* Allocate day buttons side by side honouring the text direction */
     for (i = 1; i <= 7; ++i) {
-        gtk_widget_get_child_requisition (priv->buttons[sval], &child_requisition);
+        gtk_widget_get_preferred_size (priv->buttons[sval], &child_requisition, NULL);
 
         alloc.x = header_x;
         alloc.y = allocation->y;
