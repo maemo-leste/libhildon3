@@ -831,7 +831,7 @@ hildon_animation_actor_set_scalex (HildonAnimationActor *self,
     priv->scale_y = y_scale;
     priv->set_scale = 1;
 
-    if (GTK_WIDGET_MAPPED (widget) && priv->ready)
+    if (gtk_widget_get_mapped (widget) && priv->ready)
     {
 	hildon_animation_actor_send_message (self,
 					     scale_atom,
@@ -925,7 +925,7 @@ hildon_animation_actor_set_rotationx (HildonAnimationActor *self,
 
     priv->set_rotation |= mask;
 
-    if (GTK_WIDGET_MAPPED (widget) && priv->ready)
+    if (gtk_widget_get_mapped (widget) && priv->ready)
     {
 	hildon_animation_actor_send_message (self,
 					     rotation_atom,
