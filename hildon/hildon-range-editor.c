@@ -96,7 +96,17 @@ hildon_range_editor_forall                      (GtkContainer *container,
                                                  gpointer callback_data);
 
 static void
-hildon_range_editor_destroy                     (GtkObject *self);
+hildon_range_editor_destroy                     (GtkWidget *widget);
+
+static void
+hildon_range_editor_get_preferred_width         (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_range_editor_get_preferred_height        (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
 
 static void
 hildon_range_editor_size_request                (GtkWidget *widget,
@@ -168,13 +178,14 @@ hildon_range_editor_class_init                  (HildonRangeEditorClass *editor_
 
     g_type_class_add_private (editor_class, sizeof (HildonRangeEditorPrivate));
 
-    gobject_class->set_property = hildon_range_editor_set_property;
-    gobject_class->get_property = hildon_range_editor_get_property;
-    widget_class->size_request  = hildon_range_editor_size_request;
-    widget_class->size_allocate = hildon_range_editor_size_allocate;
+    gobject_class->set_property        = hildon_range_editor_set_property;
+    gobject_class->get_property        = hildon_range_editor_get_property;
+    widget_class->get_preferred_width  = hildon_range_editor_get_preferred_width;
+    widget_class->get_preferred_height = hildon_range_editor_get_preferred_height;
+    widget_class->size_allocate        = hildon_range_editor_size_allocate;
+    widget_class->destroy              = hildon_range_editor_destroy;
 
     container_class->forall = hildon_range_editor_forall;
-    GTK_OBJECT_CLASS (editor_class)->destroy = hildon_range_editor_destroy;
 
     gtk_widget_class_install_style_property (widget_class,
             g_param_spec_int ("hildon_range_editor_entry_alignment",
@@ -273,7 +284,7 @@ hildon_range_editor_init                        (HildonRangeEditor *editor)
     priv = HILDON_RANGE_EDITOR_GET_PRIVATE (editor);
     g_assert (priv);
 
-    GTK_WIDGET_SET_FLAGS (editor, GTK_NO_WINDOW);
+    gtk_widget_set_has_window (GTK_WIDGET(editor), FALSE);
 
     gtk_widget_push_composite_child ();
 
@@ -336,13 +347,9 @@ hildon_range_editor_init                        (HildonRangeEditor *editor)
     g_signal_connect (priv->end_entry, "changed", 
             G_CALLBACK (hildon_range_editor_entry_changed), editor);
 
-#ifdef MAEMO_GTK 
-    g_object_set (G_OBJECT (priv->start_entry),
-            "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
+    gtk_entry_set_input_purpose (GTK_ENTRY (priv->start_entry), GTK_INPUT_PURPOSE_DIGITS);
 
-    g_object_set( G_OBJECT (priv->end_entry),
-            "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
-#endif 
+    gtk_entry_set_input_purpose (GTK_ENTRY (priv->end_entry), GTK_INPUT_PURPOSE_DIGITS);
 
     gtk_widget_show (priv->start_entry);
     gtk_widget_show (priv->end_entry);
@@ -623,9 +630,9 @@ hildon_range_editor_forall                      (GtkContainer *container,
 }
 
 static void
-hildon_range_editor_destroy                     (GtkObject *self)
+hildon_range_editor_destroy                     (GtkWidget *widget)
 {
-    HildonRangeEditorPrivate *priv = HILDON_RANGE_EDITOR_GET_PRIVATE (self);
+    HildonRangeEditorPrivate *priv = HILDON_RANGE_EDITOR_GET_PRIVATE (widget);
 
     if (priv->start_entry)
     {
@@ -643,10 +650,33 @@ hildon_range_editor_destroy                     (GtkObject *self)
         priv->label = NULL;
     }
 
-    if (GTK_OBJECT_CLASS (parent_class)->destroy)
-        GTK_OBJECT_CLASS (parent_class)->destroy (self);
+    if (GTK_WIDGET_CLASS (parent_class)->destroy)
+        GTK_WIDGET_CLASS (parent_class)->destroy (widget);
 }
 
+static void
+hildon_range_editor_get_preferred_width         (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_range_editor_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_range_editor_get_preferred_height        (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_range_editor_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
 
 static void
 hildon_range_editor_size_request                (GtkWidget *widget,
@@ -654,21 +684,28 @@ hildon_range_editor_size_request                (GtkWidget *widget,
 {
     HildonRangeEditorPrivate *priv = NULL;
     GtkRequisition lab_req, mreq;
+    GtkStyleContext *context;
+    gint xthickness, ythickness;
 
     priv = HILDON_RANGE_EDITOR_GET_PRIVATE (widget);
     g_assert (priv);
 
     gtk_entry_get_width_chars (GTK_ENTRY (priv->end_entry));
 
-    gtk_widget_size_request (priv->start_entry, &mreq);
-    gtk_widget_size_request (priv->end_entry, &mreq);
-    gtk_widget_size_request (priv->label, &lab_req);
+    gtk_widget_get_preferred_size (priv->start_entry, &mreq, NULL);
+    gtk_widget_get_preferred_size (priv->end_entry, &mreq, NULL);
+    gtk_widget_get_preferred_size (priv->label, &lab_req, NULL);
+
+    context = gtk_widget_get_style_context(widget);
+    gtk_style_context_get(context, gtk_style_context_get_state(context),
+                          "xthickness", &xthickness,
+                          "ythickness", &ythickness,
+                          NULL);
 
     /* Width for entries and separator label and border */
-    requisition->width = mreq.width * 2 + lab_req.width +
-        widget->style->xthickness * 2;
+    requisition->width = mreq.width * 2 + lab_req.width + xthickness * 2;
     /* Add vertical border */
-    requisition->height = mreq.height + widget->style->ythickness * 2;
+    requisition->height = mreq.height + ythickness * 2;
     /* Fit label height */
     requisition->height = MAX (requisition->height, lab_req.height);
 }
@@ -685,15 +722,15 @@ hildon_range_editor_size_allocate               (GtkWidget *widget,
     priv = HILDON_RANGE_EDITOR_GET_PRIVATE (widget);
     g_assert (priv);
 
-    widget->allocation = *allocation;
+    gtk_widget_set_allocation (widget, allocation);
 
     /* Allocate entries, left-to-right */
-    if (priv->start_entry && GTK_WIDGET_VISIBLE (priv->start_entry))
+    if (priv->start_entry && gtk_widget_get_visible (priv->start_entry))
     {
         GtkRequisition child_requisition;
 
-        gtk_widget_get_child_requisition (priv->start_entry,
-                &child_requisition);
+        gtk_widget_get_preferred_size (priv->start_entry,
+                &child_requisition, NULL);
 
         child1_allocation.x = allocation->x;
         child1_allocation.y = allocation->y;
@@ -704,11 +741,11 @@ hildon_range_editor_size_allocate               (GtkWidget *widget,
         gtk_widget_size_allocate (priv->start_entry, &child1_allocation);
     }
 
-    if (priv->label && GTK_WIDGET_VISIBLE (priv->label))
+    if (priv->label && gtk_widget_get_visible (priv->label))
     {
         GtkRequisition child_requisition;
 
-        gtk_widget_get_child_requisition (priv->label, &child_requisition);
+        gtk_widget_get_preferred_size (priv->label, &child_requisition, NULL);
 
         child2_allocation.x = child1_allocation.x + child1_allocation.width;
         child2_allocation.y = allocation->y;
@@ -719,11 +756,11 @@ hildon_range_editor_size_allocate               (GtkWidget *widget,
         gtk_widget_size_allocate (priv->label, &child2_allocation);
     }
 
-    if (priv->end_entry && GTK_WIDGET_VISIBLE (priv->end_entry))
+    if (priv->end_entry && gtk_widget_get_visible (priv->end_entry))
     {
         GtkRequisition child_requisition;
 
-        gtk_widget_get_child_requisition (priv->end_entry, &child_requisition);
+        gtk_widget_get_preferred_size (priv->end_entry, &child_requisition, NULL);
 
         child3_allocation.x = child2_allocation.x + child2_allocation.width;
         child3_allocation.y = allocation->y;
@@ -767,7 +804,7 @@ hildon_range_editor_entry_keypress              (GtkWidget *widget,
 
     switch (event->keyval)
     {
-        case GDK_Left:
+        case GDK_KEY_Left:
             /* If we are on the first character and press left, 
                try to move to previous field */
             if (cursor_pos == 0) {
@@ -776,7 +813,7 @@ hildon_range_editor_entry_keypress              (GtkWidget *widget,
             }
             break;
 
-        case GDK_Right:
+        case GDK_KEY_Right:
             /* If the cursor is on the right, try to move to the next field */
             if (cursor_pos >= g_utf8_strlen (text, -1)) {
                 (void) gtk_widget_child_focus (GTK_WIDGET (editor), GTK_DIR_RIGHT);
