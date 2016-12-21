@@ -355,7 +355,7 @@ hildon_program_update_top_most                  (HildonProgram *program)
       XWMHints *wm_hints;
       
       gdk_error_trap_push ();
-      wm_hints = XGetWMHints (GDK_DISPLAY (), active_window);
+      wm_hints = XGetWMHints (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()), active_window);
       xerror = gdk_error_trap_pop ();
       if (xerror && xerror != BadWindow)
       {
@@ -369,7 +369,7 @@ hildon_program_update_top_most                  (HildonProgram *program)
         GSList *iter;
         for (iter = priv->windows ; iter && !is_topmost; iter = iter->next)
           {
-            GdkWindow *gdkwin = GTK_WIDGET (iter->data)->window;
+            GdkWindow *gdkwin = gtk_widget_get_window (GTK_WIDGET (iter->data));
             GdkWindow *group = gdkwin ? gdk_window_get_group (gdkwin) : NULL;
             if (group)
               is_topmost = wm_hints->window_group == GDK_WINDOW_XID (group);
@@ -403,7 +403,8 @@ hildon_program_root_window_event_filter         (GdkXEvent *xevent,
     XAnyEvent *eventti = xevent;
     HildonProgram *program = HILDON_PROGRAM (data);
     Atom active_app_atom =
-            XInternAtom (GDK_DISPLAY (), "_MB_CURRENT_APP_WINDOW", False);
+            XInternAtom (GDK_DISPLAY_XDISPLAY (gdk_display_get_default ()),
+                         "_MB_CURRENT_APP_WINDOW", False);
 
     if (eventti->type == PropertyNotify)
     {
@@ -528,7 +529,7 @@ hildon_program_add_window                       (HildonProgram *self,
 
     /* Now that we have a window we should start keeping track of
      * the root window */
-    if (GTK_WIDGET_REALIZED (window))
+    if (gtk_widget_get_realized (GTK_WIDGET (window)))
     {
         window_add_event_filter (GTK_WIDGET (window), self);
     }
@@ -578,7 +579,7 @@ hildon_program_remove_window                    (HildonProgram *self,
 
     priv->window_count --;
 
-    if (GTK_WIDGET_REALIZED (window))
+    if (gtk_widget_get_realized (GTK_WIDGET (window)))
     {
         gdk_window_remove_filter (gtk_widget_get_window (GTK_WIDGET (window)),
                                   hildon_program_root_window_event_filter,
@@ -666,7 +667,7 @@ hildon_program_set_common_menu                  (HildonProgram *self,
 
     if (priv->common_menu)
     {
-        if (GTK_WIDGET_VISIBLE (priv->common_menu))
+        if (gtk_widget_get_visible (GTK_WIDGET (priv->common_menu)))
         {
             gtk_menu_popdown (priv->common_menu);
             gtk_menu_shell_deactivate (GTK_MENU_SHELL (priv->common_menu));
@@ -701,8 +702,7 @@ hildon_program_set_common_menu                  (HildonProgram *self,
 
     if (priv->common_menu)
     {
-        g_object_ref (menu);
-        gtk_object_sink (GTK_OBJECT (menu));
+        g_object_ref_sink (G_OBJECT (menu));
         gtk_widget_show_all (GTK_WIDGET (menu));
     }
 }
@@ -846,9 +846,10 @@ hildon_program_set_common_toolbar               (HildonProgram *self,
 
     if (priv->common_toolbar)
     {
-        if (priv->common_toolbar->parent)
+        GtkWidget *parent = gtk_widget_get_parent (priv->common_toolbar);
+        if (parent)
         {
-            gtk_container_remove (GTK_CONTAINER (priv->common_toolbar->parent), 
+            gtk_container_remove (GTK_CONTAINER (parent), 
                                   priv->common_toolbar);
         }
         
@@ -859,8 +860,7 @@ hildon_program_set_common_toolbar               (HildonProgram *self,
 
     if (priv->common_toolbar)
     {
-        g_object_ref (priv->common_toolbar);
-        gtk_object_sink (GTK_OBJECT (priv->common_toolbar) );
+        g_object_ref_sink (G_OBJECT (priv->common_toolbar) );
     }
 
     /* if the program is the topmost we have to update the common
