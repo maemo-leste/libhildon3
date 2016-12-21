@@ -260,13 +260,12 @@ hildon_login_dialog_init                        (HildonLoginDialog *dialog)
     HildonCaption *caption;
 
     /* Initialize dialog */
-    gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
     gtk_window_set_title (GTK_WINDOW(dialog), _(HILDON_LOGIN_DIALOG_TITLE));
 
     /* Optional message label */    
     /* FIXME Set the warpping for the message label */
     priv->message_label = GTK_LABEL (gtk_label_new (NULL));
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (dialog)->vbox), 
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), 
             GTK_WIDGET (priv->message_label), FALSE, FALSE, 0);
 
     /* Create buttons */    
@@ -275,9 +274,7 @@ hildon_login_dialog_init                        (HildonLoginDialog *dialog)
     /* Setup username entry */
     priv->username_entry = hildon_entry_new (HILDON_SIZE_FINGER_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
 
-#ifdef MAEMO_GTK 
-    g_object_set (priv->username_entry, "hildon-input-mode", HILDON_GTK_INPUT_MODE_FULL, NULL);
-#endif
+    g_object_set (priv->username_entry, "input-purpose", GTK_INPUT_PURPOSE_FREE_FORM, NULL);
 
     caption = HILDON_CAPTION (hildon_caption_new
             (group,
@@ -286,15 +283,13 @@ hildon_login_dialog_init                        (HildonLoginDialog *dialog)
              HILDON_CAPTION_OPTIONAL));
 
     hildon_caption_set_separator (caption, "");
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (dialog)->vbox), 
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))), 
             GTK_WIDGET (caption), FALSE, FALSE, 0);
 
     /* Setup password entry */
     priv->password_entry = hildon_entry_new (HILDON_SIZE_FINGER_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
 
-#ifdef MAEMO_GTK
-    g_object_set (priv->password_entry, "hildon-input-mode", HILDON_GTK_INPUT_MODE_FULL, NULL);
-#endif
+    g_object_set (priv->password_entry, "input-purpose", GTK_INPUT_PURPOSE_PASSWORD, NULL);
 
     gtk_entry_set_visibility (GTK_ENTRY (priv->password_entry), FALSE);
 
@@ -305,11 +300,11 @@ hildon_login_dialog_init                        (HildonLoginDialog *dialog)
                     HILDON_CAPTION_OPTIONAL));
 
     hildon_caption_set_separator (caption, "");
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (dialog)->vbox),
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
             GTK_WIDGET (caption), FALSE, FALSE, 0);
 
-    gtk_widget_show_all (GTK_DIALOG (dialog)->vbox);
-    gtk_widget_show_all (GTK_DIALOG (dialog)->action_area);
+    gtk_widget_show_all (gtk_dialog_get_content_area (GTK_DIALOG (dialog)));
+    gtk_widget_show_all (gtk_dialog_get_action_area (GTK_DIALOG (dialog)));
     gtk_dialog_set_default_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
 
     /* Ensure group is freed when all its contents have been removed */
