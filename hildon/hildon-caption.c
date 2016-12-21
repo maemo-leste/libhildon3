@@ -99,7 +99,7 @@ hildon_caption_get_property                     (GObject *object,
                                                  GParamSpec *pspec);
 
 static void 
-hildon_caption_destroy                          (GtkObject *self);
+hildon_caption_destroy                          (GtkWidget *widget);
 
 static gboolean 
 hildon_caption_button_press                     (GtkWidget *widget, 
@@ -190,7 +190,6 @@ hildon_caption_class_init                       (HildonCaptionClass *caption_cla
     gobject_class->get_property                 = hildon_caption_get_property;
     gobject_class->set_property                 = hildon_caption_set_property;
     caption_class->activate                     = (gpointer) hildon_caption_activate;
-    GTK_OBJECT_CLASS(caption_class)->destroy    = hildon_caption_destroy;
 
     container_class->forall                     = hildon_caption_forall;
     container_class->set_child_property         = hildon_caption_set_child_property;
@@ -201,6 +200,7 @@ hildon_caption_class_init                       (HildonCaptionClass *caption_cla
     widget_class->size_allocate                 = hildon_caption_size_allocate;
     widget_class->button_press_event            = hildon_caption_button_press;
     widget_class->grab_focus                    = hildon_caption_grab_focus;
+    widget_class->destroy                       = hildon_caption_destroy;
 
     /* Create new signals and properties */
     widget_class->activate_signal = g_signal_new ("activate",
@@ -305,9 +305,9 @@ hildon_caption_class_init                       (HildonCaptionClass *caption_cla
 
 /* Destroy can be called multiple times, remember to set pointers to NULL */
 static void 
-hildon_caption_destroy                          (GtkObject *self)
+hildon_caption_destroy                          (GtkWidget *widget)
 {
-    HildonCaptionPrivate *priv = HILDON_CAPTION_GET_PRIVATE (self);
+    HildonCaptionPrivate *priv = HILDON_CAPTION_GET_PRIVATE (widget);
 
     /* Free our internal child */
     if (priv && priv->caption_area)
@@ -330,8 +330,8 @@ hildon_caption_destroy                          (GtkObject *self)
     }
 
     /* Parent classes destroy takes care of user packed contents */
-    if (GTK_OBJECT_CLASS (parent_class)->destroy)
-        GTK_OBJECT_CLASS (parent_class)->destroy (self);
+    if (GTK_WIDGET_CLASS (parent_class)->destroy)
+        GTK_WIDGET_CLASS (parent_class)->destroy (widget);
 }
 
 static void 
@@ -510,8 +510,8 @@ static gboolean
 hildon_caption_button_press                     (GtkWidget *widget, 
                                                  GdkEventButton *event)
 {
-    gtk_widget_grab_focus (GTK_BIN (widget)->child);
-    
+    gtk_widget_grab_focus (gtk_bin_get_child (GTK_BIN (widget)));
+
     /* we'll update our focused state in set-focus when/if the child receives
      * focus */
 
@@ -537,7 +537,7 @@ hildon_caption_init                             (HildonCaption *caption)
     gtk_widget_push_composite_child();
 
     /* Create caption text */
-    priv->caption_area = gtk_hbox_new (FALSE, HILDON_CAPTION_SPACING); 
+    priv->caption_area = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, HILDON_CAPTION_SPACING); 
     priv->label = gtk_label_new (NULL);
     priv->icon_align = gtk_alignment_new (0.5f, 0.5f, 0.0f, 0.0f);
     priv->icon_position = HILDON_CAPTION_POSITION_RIGHT;
@@ -666,12 +666,12 @@ hildon_caption_size_allocate                    (GtkWidget *widget,
                 MAX (allocation->width - GTK_CONTAINER (widget)->border_width * 2, 0),
                 MAX (allocation->height - GTK_CONTAINER (widget)->border_width * 2, 0));
 
-    child = GTK_BIN (widget)->child;
+    child = gtk_bin_get_child (GTK_BIN (widget));
     if (child)
-        gtk_widget_get_child_requisition (child, &child_req);
+        gtk_widget_get_preferred_size (child, &child_req, NULL);
 
-    widget->allocation = *allocation;
-    gtk_widget_get_child_requisition (priv->caption_area, &req);
+    gtk_widget_size_allocate (widget, allocation);
+    gtk_widget_get_preferred_size (priv->caption_area, &req, NULL);
 
     child_alloc.height = caption_alloc.height = allocation->height;
     child_alloc.width  = caption_alloc.width  = allocation->width;
@@ -702,13 +702,13 @@ hildon_caption_size_allocate                    (GtkWidget *widget,
     }
 
     /* Give the child at least its minimum requisition, unless it is expandable */
-    if (! priv->expand && child && GTK_WIDGET_VISIBLE(child))
+    if (! priv->expand && child && gtk_widget_get_visible (child))
     {
         child_alloc.width  = MIN (child_alloc.width,  child_req.width);
         child_alloc.height = MIN (child_alloc.height, child_req.height);
 	/* Center the child */
 	child_alloc.y = (allocation->height - child_alloc.height -
-			 2 * GTK_CONTAINER (widget)->border_width)/2;
+			 2 * gtk_container_get_border_width (GTK_CONTAINER (widget)))/2;
     }
 
     /* Ensure there are no negative dimensions */
@@ -725,7 +725,7 @@ hildon_caption_size_allocate                    (GtkWidget *widget,
     child_alloc.height = MAX (child_alloc.height, 0);
     caption_alloc.height = MAX (caption_alloc.height, 0);
 
-    if (child && GTK_WIDGET_VISIBLE(child) )
+    if (child && gtk_widget_get_visible (child) )
         gtk_widget_size_allocate (child, &child_alloc );
 
     gtk_widget_size_allocate (priv->caption_area, &caption_alloc);
@@ -1072,14 +1072,14 @@ hildon_caption_get_separator                    (const HildonCaption *caption)
 static void 
 hildon_caption_activate                         (GtkWidget *widget)
 {
-    GtkWidget *child = GTK_BIN (widget)->child;
+    GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
     gtk_widget_grab_focus (child);
 }
 
 static void
 hildon_caption_grab_focus                       (GtkWidget *widget)
 {
-    gtk_widget_grab_focus (GTK_BIN (widget)->child);
+    gtk_widget_grab_focus (gtk_bin_get_child (GTK_BIN (widget)));
 }
 
 /**
@@ -1104,13 +1104,13 @@ hildon_caption_set_child_expand                 (HildonCaption *caption,
         return;
 
     priv->expand = expand;
-    child = GTK_BIN (caption)->child;
+    child = gtk_bin_get_child (GTK_BIN (caption));
 
     /* We do not have a child, nothing to do */
     if (! GTK_IS_WIDGET (child))
         return;
 
-    if (GTK_WIDGET_VISIBLE (child) && GTK_WIDGET_VISIBLE (caption))
+    if (gtk_widget_get_visible (child) && gtk_widget_get_visible (GTK_WIDGET (caption)))
         gtk_widget_queue_resize (child);
 
     gtk_widget_child_notify (child, "expand");
