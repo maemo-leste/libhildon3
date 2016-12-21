@@ -759,7 +759,7 @@ hildon_font_selection_dialog_init               (HildonFontSelectionDialog *font
 
     hildon_font_selection_dialog_construct_notebook (fontseldiag);
 
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (fontseldiag)->vbox),
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (fontseldiag))),
             GTK_WIDGET (priv->notebook), TRUE, TRUE, 0);
 
     /* Add dialog buttons */
@@ -784,7 +784,7 @@ hildon_font_selection_dialog_init               (HildonFontSelectionDialog *font
 
     gtk_window_set_title (GTK_WINDOW (fontseldiag), _("ecdg_ti_font"));
     /*here is the line to make sure that notebook has the default focus*/
-    gtk_container_set_focus_child (GTK_CONTAINER (GTK_DIALOG (fontseldiag)->vbox),
+    gtk_container_set_focus_child (GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (fontseldiag))),
             GTK_WIDGET (priv->notebook));
 }
 
@@ -801,12 +801,15 @@ hildon_font_selection_dialog_construct_notebook (HildonFontSelectionDialog *font
     g_assert (priv);
 
     for (i = 0; i < 3; i++)
-        vbox_tab[i] = gtk_vbox_new (TRUE, 0);
+    {
+        vbox_tab[i] = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+        gtk_box_set_homogeneous (GTK_BOX (vbox_tab[i]), TRUE);
+    }
 
     group = GTK_SIZE_GROUP (gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL));
 
     /* Build the first page of the GtkNotebook: font style */
-    priv->cbx_font_type = gtk_combo_box_new_text ();
+    priv->cbx_font_type = gtk_combo_box_text_new ();
     hildon_font_selection_dialog_show_available_fonts (fontsel);
     caption_control = hildon_caption_new (group,
             _("ecdg_fi_font_font"),
@@ -816,7 +819,7 @@ hildon_font_selection_dialog_construct_notebook (HildonFontSelectionDialog *font
 
     gtk_box_pack_start (GTK_BOX (vbox_tab[0]), caption_control, FALSE, FALSE, 0);
 
-    priv->cbx_font_size = gtk_combo_box_new_text ();
+    priv->cbx_font_size = gtk_combo_box_text_new ();
     hildon_font_selection_dialog_show_available_sizes (priv);
     caption_control = hildon_caption_new (group,
             _("ecdg_fi_font_size"),
@@ -826,7 +829,7 @@ hildon_font_selection_dialog_construct_notebook (HildonFontSelectionDialog *font
 
     gtk_box_pack_start (GTK_BOX (vbox_tab[0]), caption_control, FALSE, FALSE, 0);
 
-    font_color_box = gtk_hbox_new (FALSE, 0);
+    font_color_box = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
     priv->font_color_button = hildon_color_button_new ();
     priv->color_set = FALSE;
     priv->font_scaling = 1.0;
@@ -884,7 +887,7 @@ hildon_font_selection_dialog_construct_notebook (HildonFontSelectionDialog *font
     g_signal_connect (G_OBJECT(priv->chk_strikethrough), "clicked", 
             G_CALLBACK (toggle_clicked), NULL);
 
-    priv->cbx_positioning = gtk_combo_box_new_text ();
+    priv->cbx_positioning = gtk_combo_box_text_new ();
     hildon_font_selection_dialog_show_available_positionings (priv);
     caption_control =
         hildon_caption_new(group, _("ecdg_fi_font_special"),
@@ -1289,16 +1292,16 @@ hildon_font_selection_dialog_show_available_fonts (HildonFontSelectionDialog *fo
     for (i = 0; i < priv->n_families; i++) 
     {
         const gchar *name = pango_font_family_get_name (priv->families[i]);
-        gtk_combo_box_append_text (GTK_COMBO_BOX (priv->cbx_font_type), name);
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->cbx_font_type), name);
     }
 }
 
 static void
 hildon_font_selection_dialog_show_available_positionings (HildonFontSelectionDialogPrivate *priv)
 {
-    gtk_combo_box_append_text (GTK_COMBO_BOX (priv->cbx_positioning), _("ecdg_va_font_printpos_1"));
-    gtk_combo_box_append_text (GTK_COMBO_BOX (priv->cbx_positioning), _("ecdg_va_font_printpos_2"));
-    gtk_combo_box_append_text (GTK_COMBO_BOX (priv->cbx_positioning), _("ecdg_va_font_printpos_3"));
+    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->cbx_positioning), _("ecdg_va_font_printpos_1"));
+    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->cbx_positioning), _("ecdg_va_font_printpos_2"));
+    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->cbx_positioning), _("ecdg_va_font_printpos_3"));
 }
 
 /* Loads the sizes from a pre-allocated table */
@@ -1316,7 +1319,7 @@ hildon_font_selection_dialog_show_available_sizes (HildonFontSelectionDialogPriv
                 font_sizes[i],
                 _("ecdg_va_font_size_trailer"));
 
-        gtk_combo_box_append_text (GTK_COMBO_BOX (priv->cbx_font_size), size_str);
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->cbx_font_size), size_str);
         g_free (size_str);
     }
 }
