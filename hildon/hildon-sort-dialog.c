@@ -231,7 +231,7 @@ hildon_sort_dialog_add_sort_key_with_sorting    (HildonSortDialog *dialog,
         new_array [i] = priv->key_reversed [i];
 
     new_array [priv->index_counter] = sorting;
-    gtk_combo_box_append_text (GTK_COMBO_BOX (priv->combo_key), sort_key);
+    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->combo_key), sort_key);
 
     /* Free the old one and reassign */
     if (priv->key_reversed != NULL)
@@ -251,16 +251,16 @@ reconstruct_combo                               (HildonSortDialog *dialog,
     g_assert (priv);
 
     if (remove) {
-        gtk_combo_box_remove_text (GTK_COMBO_BOX (priv->combo_order), 1);
-        gtk_combo_box_remove_text (GTK_COMBO_BOX (priv->combo_order), 0);
+        gtk_combo_box_text_remove (GTK_COMBO_BOX_TEXT (priv->combo_order), 1);
+        gtk_combo_box_text_remove (GTK_COMBO_BOX_TEXT (priv->combo_order), 0);
     }
 
     if (reversed) {
-        gtk_combo_box_append_text (GTK_COMBO_BOX (priv->combo_order), _("ckdg_va_sort_descending"));
-        gtk_combo_box_append_text (GTK_COMBO_BOX (priv->combo_order), _("ckdg_va_sort_ascending"));
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->combo_order), _("ckdg_va_sort_descending"));
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->combo_order), _("ckdg_va_sort_ascending"));
     } else  {
-        gtk_combo_box_append_text (GTK_COMBO_BOX (priv->combo_order), _("ckdg_va_sort_ascending"));
-        gtk_combo_box_append_text (GTK_COMBO_BOX (priv->combo_order), _("ckdg_va_sort_descending"));
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->combo_order), _("ckdg_va_sort_ascending"));
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (priv->combo_order), _("ckdg_va_sort_descending"));
     }
 }
 
@@ -281,27 +281,26 @@ hildon_sort_dialog_init                         (HildonSortDialog * dialog)
 
     group = GTK_SIZE_GROUP (gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL));
 
-    gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
     gtk_window_set_modal (GTK_WINDOW (dialog), TRUE);
     gtk_window_set_title (GTK_WINDOW (dialog), _("ckdg_ti_sort"));
 
     /* Tab one */
-    priv->combo_key = gtk_combo_box_new_text ();
+    priv->combo_key = gtk_combo_box_text_new ();
     priv->caption_key = hildon_caption_new(group, _("ckdg_fi_sort_field"), priv->combo_key,
             NULL, HILDON_CAPTION_OPTIONAL);
     hildon_caption_set_separator(HILDON_CAPTION (priv->caption_key), "");
-    gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox),
+    gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
             priv->caption_key, FALSE, FALSE, 0);
 
     /* Tab two */
-    priv->combo_order = gtk_combo_box_new_text ();
+    priv->combo_order = gtk_combo_box_text_new ();
     reconstruct_combo (dialog, FALSE, FALSE);
 
     priv->caption_order = hildon_caption_new (group, _("ckdg_fi_sort_order"),
             priv->combo_order,
             NULL, HILDON_CAPTION_OPTIONAL);
     hildon_caption_set_separator(HILDON_CAPTION(priv->caption_order), "");
-    gtk_box_pack_start(GTK_BOX(GTK_DIALOG(dialog)->vbox),
+    gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area (GTK_DIALOG (dialog))),
             priv->caption_order, FALSE, FALSE, 0);
 
     gtk_combo_box_set_active (GTK_COMBO_BOX (priv->combo_key), 0);
@@ -314,7 +313,7 @@ hildon_sort_dialog_init                         (HildonSortDialog * dialog)
             GTK_RESPONSE_OK);
     /* FIXME: Hardcoded sizes are bad */
     gtk_window_resize (GTK_WINDOW (dialog), 370, 100);
-    gtk_widget_show_all (GTK_DIALOG (dialog)->vbox);
+    gtk_widget_show_all (gtk_dialog_get_content_area (GTK_DIALOG (dialog)));
 
     g_object_unref (group); /* Captions now own their references to sizegroup */
 }
