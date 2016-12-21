@@ -84,8 +84,8 @@ static void
 hildon_color_chooser_unmap                      (GtkWidget *widget);
 
 static gboolean 
-hildon_color_chooser_expose                     (GtkWidget *widget, 
-                                                 GdkEventExpose *event);
+hildon_color_chooser_draw                       (GtkWidget *widget, 
+                                                 cairo_t   *cr);
 
 static gboolean
 hildon_color_chooser_button_press               (GtkWidget *widget, 
@@ -109,19 +109,27 @@ init_borders                                    (GtkWidget *w,
                                                  GtkBorder *inner, 
                                                  GtkBorder *outer);
 
-inline void 
+static void
+draw_rgb_image                                  (cairo_t *cr,
+                                                 unsigned char *data,
+                                                 int x,
+                                                 int y,
+                                                 int width,
+                                                 int height);
+
+static inline void 
 inline_clip_to_alloc                            (void *s, 
                                                  GtkAllocation *a);
 
-inline void 
+static inline void 
 inline_sub_times                                (GTimeVal *result, 
                                                  GTimeVal *greater, 
                                                  GTimeVal *lesser);
 
-inline void 
+static inline void 
 inline_limited_expose                           (HildonColorChooser *self);
 
-inline void 
+static inline void 
 inline_draw_hue_bar                             (GtkWidget *widget, 
                                                  int x, 
                                                  int y, 
@@ -130,7 +138,7 @@ inline_draw_hue_bar                             (GtkWidget *widget,
                                                  int sy, 
                                                  int sh);
 
-inline void
+static inline void
 inline_draw_hue_bar_dimmed                      (GtkWidget *widget, 
                                                  int x, 
                                                  int y, 
@@ -139,28 +147,28 @@ inline_draw_hue_bar_dimmed                      (GtkWidget *widget,
                                                  int sy, 
                                                  int sh);
 
-inline void 
+static inline void 
 inline_draw_sv_plane                            (HildonColorChooser *self, 
                                                  int x, 
                                                  int y, 
                                                  int w, 
                                                  int h);
 
-inline void 
+static inline void 
 inline_draw_sv_plane_dimmed                     (HildonColorChooser *self, 
                                                  int x, 
                                                  int y, 
                                                  int w, 
                                                  int h);
 
-inline void 
+static inline void 
 inline_draw_crosshair                           (unsigned char *buf, 
                                                  int x, 
                                                  int y, 
                                                  int w, 
                                                  int h);
 
-inline void 
+static inline void 
 inline_h2rgb                                    (unsigned short hue, 
                                                  unsigned long *rgb);
 
@@ -231,7 +239,7 @@ static void
 hildon_color_chooser_init                       (HildonColorChooser *sel)
 {
 
-    GTK_WIDGET_SET_FLAGS (sel, GTK_NO_WINDOW);
+    gtk_widget_set_has_window (GTK_WIDGET (sel), FALSE);
     HildonColorChooserPrivate *priv = HILDON_COLOR_CHOOSER_GET_PRIVATE (sel);
     g_assert (priv);
 
@@ -269,7 +277,7 @@ hildon_color_chooser_class_init                 (HildonColorChooserClass *klass)
     widget_class->unrealize             = hildon_color_chooser_unrealize;
     widget_class->map                   = hildon_color_chooser_map;
     widget_class->unmap                 = hildon_color_chooser_unmap;
-    widget_class->expose_event          = hildon_color_chooser_expose;
+    widget_class->draw                  = hildon_color_chooser_draw;
     widget_class->button_press_event    = hildon_color_chooser_button_press;
     widget_class->button_release_event  = hildon_color_chooser_button_release;
     widget_class->motion_notify_event   = hildon_color_chooser_pointer_motion;
@@ -360,7 +368,7 @@ hildon_color_chooser_size_allocate              (GtkWidget *widget,
 
     g_assert (priv);
 
-    widget->allocation = *alloc;
+    gtk_widget_set_allocation (widget, alloc);
     
     init_borders(widget, &inner, &outer);
 
@@ -374,12 +382,12 @@ hildon_color_chooser_size_allocate              (GtkWidget *widget,
     priv->spa.height = alloc->height - outer.top - outer.bottom;
     priv->spa.width = alloc->width - outer.left - outer.right - inner.top - inner.bottom;
 
-    if (GTK_WIDGET_REALIZED (widget)) {
+    if (gtk_widget_get_realized (widget)) {
         gdk_window_move_resize (priv->event_window, 
-                widget->allocation.x, 
-                widget->allocation.y, 
-                widget->allocation.width, 
-                widget->allocation.height);
+                alloc->x, 
+                alloc->y, 
+                alloc->width, 
+                alloc->height);
     }
 }
 
@@ -391,11 +399,13 @@ hildon_color_chooser_realize                    (GtkWidget *widget)
     g_assert (priv);
     GdkWindowAttr attributes;
     gint attributes_mask;
+    GtkAllocation allocation;
 
-    attributes.x = widget->allocation.x;
-    attributes.y = widget->allocation.y;
-    attributes.width = widget->allocation.width;
-    attributes.height = widget->allocation.height;
+    gtk_widget_get_allocation (widget, &allocation);
+    attributes.x = allocation.x;
+    attributes.y = allocation.y;
+    attributes.width = allocation.width;
+    attributes.height = allocation.height;
     attributes.wclass = GDK_INPUT_ONLY;
     attributes.window_type = GDK_WINDOW_CHILD;
 
@@ -408,10 +418,10 @@ hildon_color_chooser_realize                    (GtkWidget *widget)
         GDK_BUTTON1_MOTION_MASK;
 
     attributes.visual = gtk_widget_get_visual (widget);
-    attributes.colormap = gtk_widget_get_colormap (widget);
+    //attributes.colormap = gtk_widget_get_colormap (widget);
 
     attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL | GDK_WA_WMCLASS;
-    priv->event_window = gdk_window_new (widget->parent->window, &attributes, attributes_mask);
+    priv->event_window = gdk_window_new (gtk_widget_get_window (gtk_widget_get_parent (widget)), &attributes, attributes_mask);
 
 
     gdk_window_set_user_data (priv->event_window, widget);
@@ -486,8 +496,8 @@ inline_clip_to_alloc                            (void *s,
 }
 
 static gboolean 
-hildon_color_chooser_expose                     (GtkWidget *widget, 
-                                                 GdkEventExpose *event)
+hildon_color_chooser_draw                       (GtkWidget *widget, 
+                                                 cairo_t   *cr)
 {
     HildonColorChooser *sel = HILDON_COLOR_CHOOSER (widget);
     HildonColorChooserPrivate *priv = HILDON_COLOR_CHOOSER_GET_PRIVATE (widget);
@@ -501,7 +511,7 @@ hildon_color_chooser_expose                     (GtkWidget *widget,
     } area;
 
 
-    if(! GTK_WIDGET_REALIZED (widget)) {
+    if(! gtk_widget_get_realized (widget)) {
         return FALSE;
     }
 
@@ -509,25 +519,16 @@ hildon_color_chooser_expose                     (GtkWidget *widget,
     
     if (event->area.width || event->area.height) {
 
-        gdk_draw_rectangle (widget->window,
-                widget->style->black_gc,
-                FALSE,
-                priv->hba.x - 2, 
-                priv->hba.y - 2, 
-                priv->hba.width + 3,
-                priv->hba.height + 3);
+        cairo_set_source_rgb (cr, 0, 0, 0);
+        cairo_rectangle (cr, priv->hba.x - 2, priv->hba.y - 2, priv->hba.width + 3, priv->hba.height + 3);
+        cairo_stroke (cr);
 
-        gdk_draw_rectangle (widget->window,
-                widget->style->black_gc,
-                FALSE,
-                priv->spa.x - 2, 
-                priv->spa.y - 2, 
-                priv->spa.width + 3,
-                priv->spa.height + 3);
+        cairo_rectangle (cr, priv->spa.x - 2, priv->spa.y - 2, priv->spa.width + 3, priv->spa.height + 3);
+        cairo_stroke (cr);
     }
 
     if (priv->expose_info.expose_queued) {
-        if (GTK_WIDGET_SENSITIVE (widget)) {
+        if (gtk_widget_is_sensitive (widget)) {
             inline_draw_hue_bar (widget, priv->hba.x, priv->hba.y, priv->hba.width, priv->hba.height, priv->hba.y, priv->hba.height);
 
             inline_draw_sv_plane (sel, priv->spa.x, priv->spa.y, priv->spa.width, priv->spa.height);
@@ -550,7 +551,7 @@ hildon_color_chooser_expose                     (GtkWidget *widget,
 
         inline_clip_to_alloc (&area, &priv->hba);
 
-        if(GTK_WIDGET_SENSITIVE (widget)) {
+        if(gtk_widget_is_sensitive (widget)) {
             inline_draw_hue_bar (widget, area.x, area.y, area.w, area.h, priv->hba.y, priv->hba.height);
         } else {
             inline_draw_hue_bar_dimmed (widget, area.x, area.y, area.w, area.h, priv->hba.y, priv->hba.height);
@@ -563,7 +564,7 @@ hildon_color_chooser_expose                     (GtkWidget *widget,
 
         inline_clip_to_alloc (&area, &priv->spa);
 
-        if (GTK_WIDGET_SENSITIVE (widget)) {
+        if (gtk_widget_is_sensitive (widget)) {
             inline_draw_sv_plane (sel, area.x, area.y, area.w, area.h);
         } else {
             inline_draw_sv_plane_dimmed (sel, area.x, area.y, area.w, area.h);
@@ -595,7 +596,7 @@ inline_limited_expose                           (HildonColorChooser *sel)
     GdkEventExpose event;
     HildonColorChooserPrivate *priv; 
    
-    if (! GTK_WIDGET_REALIZED (GTK_WIDGET (sel))) {
+    if (! gtk_widget_get_realized (GTK_WIDGET (sel))) {
         return;
     }
 
@@ -619,7 +620,7 @@ inline_limited_expose                           (HildonColorChooser *sel)
         event.type = GDK_EXPOSE;
         event.area.width = 0;
         event.area.height = 0;
-        event.window = GTK_WIDGET(sel)->window;
+        event.window = gtk_widget_get_window (GTK_WIDGET(sel));
 
         gtk_widget_send_expose(GTK_WIDGET(sel), (GdkEvent *)&event);
 
@@ -635,12 +636,14 @@ hildon_color_chooser_button_press               (GtkWidget *widget,
 {
     HildonColorChooser *sel = HILDON_COLOR_CHOOSER (widget);
     HildonColorChooserPrivate *priv = HILDON_COLOR_CHOOSER_GET_PRIVATE (widget);
+    GtkAllocation allocation;
 
     g_assert (priv);
     int x, y, tmp;
 
-    x = (int) event->x + widget->allocation.x;
-    y = (int) event->y + widget->allocation.y;
+    gtk_widget_get_allocation (widget, &allocation);
+    x = (int) event->x + allocation.x;
+    y = (int) event->y + allocation.y;
 
     if (x >= priv->spa.x && x <= priv->spa.x + priv->spa.width &&
         y >= priv->spa.y && y <= priv->spa.y + priv->spa.height) {
@@ -700,13 +703,15 @@ hildon_color_chooser_pointer_motion             (GtkWidget *widget,
 {
     HildonColorChooser *sel = HILDON_COLOR_CHOOSER (widget);
     HildonColorChooserPrivate *priv = HILDON_COLOR_CHOOSER_GET_PRIVATE (widget);
+    GtkAllocation allocation;
 
     gint x, y, tmp;
 
     g_assert (priv);
 
-    x = (int) event->x + widget->allocation.x;
-    y = (int) event->y + widget->allocation.y;
+    gtk_widget_get_allocation (widget, &allocation);
+    x = (int) event->x + allocation.x;
+    y = (int) event->y + allocation.y;
 
     if (priv->mousestate == 1) {
         if (x >= priv->spa.x && x <= priv->spa.x + priv->spa.width &&
@@ -788,6 +793,23 @@ init_borders                                    (GtkWidget *w,
     if (inner->left < 2) inner->left = 2;
     if (inner->right < 2) inner->right = 2;
     if (inner->top < 2) inner->top = 2;
+}
+
+static void
+draw_rgb_image                                  (cairo_t *cr,
+                                                 unsigned char *data,
+                                                 int x,
+                                                 int y,
+                                                 int width,
+                                                 int height)
+{
+    GdkPixbuf *pixbuf;
+
+    pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB,
+        FALSE, 8, width, height, width * 3, NULL, NULL);
+    gdk_cairo_set_source_pixbuf(cr, pixbuf, x, y);
+    cairo_paint(cr);
+    g_object_unref(pixbuf);
 }
 
 /**
@@ -977,6 +999,8 @@ inline_draw_hue_bar                             (GtkWidget *widget,
     unsigned short hvec, hcurr;
     unsigned char *buf, *ptr, tmp[3];
     int i, j, tmpy;
+    cairo_t *cr;
+    GdkRGBA rgba;
     g_assert (priv);
 
     if (w <= 0 || h <= 0) {
@@ -1003,24 +1027,28 @@ inline_draw_hue_bar                             (GtkWidget *widget,
         hcurr += hvec;
     }
 
+    cr = gdk_cairo_create(gtk_widget_get_window (gtk_widget_get_parent (widget)));
+    draw_rgb_image(cr, buf, x, y, w, h);
 
-    gdk_draw_rgb_image (widget->parent->window, 
-            widget->style->fg_gc[0], 
-            x, y, 
-            w, h, 
-            GDK_RGB_DITHER_NONE, buf, w * 3);
+    /* trick so we don't have to add 0.5 to all the line calls below */
+    //cairo_translate (cr, 0.5, 0.5);
+    gtk_style_context_get_color (gtk_widget_get_style_context (widget), gtk_widget_get_state_flags(widget), &rgba);
+    gdk_cairo_set_source_rgba(cr, &rgba);
 
     tmpy = priv->hba.y + (priv->currhue * priv->hba.height / 0xffff);
-    gdk_draw_line (widget->parent->window, widget->style->fg_gc[GTK_WIDGET_STATE(widget)], priv->hba.x, tmpy, priv->hba.x + priv->hba.width - 1, tmpy);
+    cairo_move_to (cr, priv->hba.x, tmpy);
+    cairo_line_to (cr, priv->hba.x + priv->hba.width - 1, tmpy);
 
     if ((((priv->currhue * priv->hba.height) & 0xffff) > 0x8000) && (tmpy < (priv->hba.y + priv->hba.height))) {
-        gdk_draw_line (widget->parent->window, widget->style->fg_gc[GTK_WIDGET_STATE(widget)], 
-                priv->hba.x, tmpy+1, priv->hba.x + priv->hba.width - 1, tmpy+1);
+        cairo_move_to (cr, priv->hba.x, tmpy+1);
+        cairo_line_to (cr, priv->hba.x + priv->hba.width - 1, tmpy+1);
     } else if (tmpy > priv->hba.y) {
-        gdk_draw_line(widget->parent->window, widget->style->fg_gc[GTK_WIDGET_STATE(widget)], priv->hba.x, 
-                tmpy-1, priv->hba.x + priv->hba.width - 1, tmpy-1);
+        cairo_move_to (cr, priv->hba.x, tmpy-1);
+        cairo_line_to (cr, priv->hba.x + priv->hba.width - 1, tmpy-1);
     }
-
+    cairo_set_line_width(cr, 2);
+    cairo_stroke(cr);
+    cairo_destroy(cr);
     g_free(buf);
 }
 
@@ -1035,6 +1063,7 @@ inline_draw_hue_bar_dimmed                      (GtkWidget *widget,
 {
     HildonColorChooser *sel = HILDON_COLOR_CHOOSER (widget);
     HildonColorChooserPrivate *priv;
+    cairo_t *cr;
 
     if (w <= 0 || h <= 0) {
         return;
@@ -1072,7 +1101,10 @@ inline_draw_hue_bar_dimmed                      (GtkWidget *widget,
         priv->dimmed_bar = gdk_pixbuf_new_from_data (buf, GDK_COLORSPACE_RGB, FALSE, 8, w, h, w * 3, (gpointer) g_free, buf);
     }
 
-    gdk_draw_pixbuf (widget->parent->window, widget->style->fg_gc [0], priv->dimmed_bar, 0, 0, x, y, w, h, GDK_RGB_DITHER_NONE, 0, 0);
+    cr = gdk_cairo_create(gtk_widget_get_window (gtk_widget_get_parent (widget)));
+    gdk_cairo_set_source_pixbuf (cr, priv->dimmed_bar, x, y);
+    cairo_paint (cr);
+    cairo_destroy(cr);
 }
 
 inline void 
@@ -1120,6 +1152,7 @@ inline_draw_sv_plane                            (HildonColorChooser *sel,
     HildonColorChooserPrivate *priv;
     int i, j;
     int tmp;
+    cairo_t *cr;
 
     if (w <= 0 || h <= 0) {
         return;
@@ -1175,7 +1208,9 @@ inline_draw_sv_plane                            (HildonColorChooser *sel,
             (priv->spa.height * priv->currsat / 0xffff) - y + priv->spa.y - 4, 
             w, h);
 
-    gdk_draw_rgb_image (widget->parent->window, widget->style->fg_gc[0], x, y, w, h, GDK_RGB_DITHER_NONE, buf, w * 3);
+    cr = gdk_cairo_create(gtk_widget_get_window (gtk_widget_get_parent (widget)));
+    draw_rgb_image(cr, buf, x, y, w, h);
+    cairo_destroy(cr);
     g_free(buf);
 }
 
@@ -1188,6 +1223,10 @@ inline_draw_sv_plane_dimmed                     (HildonColorChooser *sel,
 {
     GtkWidget *widget = GTK_WIDGET (sel);
     HildonColorChooserPrivate *priv = HILDON_COLOR_CHOOSER_GET_PRIVATE (sel);
+    cairo_t *cr;
+#if GTK_CHECK_VERSION (3,22,0)
+    GdkDrawingContext *ctx;
+#endif
 
     g_assert (priv);
 
@@ -1255,7 +1294,20 @@ inline_draw_sv_plane_dimmed                     (HildonColorChooser *sel,
         priv->dimmed_plane = gdk_pixbuf_new_from_data (buf, GDK_COLORSPACE_RGB, FALSE, 8, w, h, w * 3, (gpointer) g_free, buf);
     }
 
-    gdk_draw_pixbuf (widget->parent->window, widget->style->fg_gc [0], priv->dimmed_plane, 0, 0, x, y, w, h, GDK_RGB_DITHER_NONE, 0, 0);
+    //gdk_draw_pixbuf (gtk_widget_get_window (gtk_widget_get_parent (widget)), widget->style->fg_gc [0], priv->dimmed_plane, 0, 0, x, y, w, h, GDK_RGB_DITHER_NONE, 0, 0);
+#if GTK_CHECK_VERSION (3,22,0)
+   ctx = gdk_window_begin_draw_frame(gtk_widget_get_window (gtk_widget_get_parent (widget)), NULL);
+   cr = gdk_drawing_context_get_cairo_context(ctx);
+#else
+    cr = gdk_cairo_create (gtk_widget_get_window (gtk_widget_get_parent (widget)));
+#endif
+    gdk_cairo_set_source_pixbuf (cr, priv->dimmed_plane, x, y);
+    cairo_paint (cr);
+#if GTK_CHECK_VERSION (3,22,0)
+    gdk_window_end_draw_frame(gtk_widget_get_window (gtk_widget_get_parent (widget)), ctx);
+#else
+    cairo_destroy (cr);
+#endif
 }
 
 
