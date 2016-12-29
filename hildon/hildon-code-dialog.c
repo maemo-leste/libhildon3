@@ -220,8 +220,8 @@ hildon_code_dialog_init                         (HildonCodeDialog *dialog)
     gtk_table_set_row_spacings (GTK_TABLE (table), HILDON_MARGIN_DEFAULT );
     gtk_table_set_col_spacings (GTK_TABLE (table), HILDON_MARGIN_DEFAULT );
 
-    dialog_vbox1 = GTK_DIALOG (dialog)->vbox;
-    vbox1 = gtk_vbox_new (FALSE, 0);
+    dialog_vbox1 = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+    vbox1 = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     gtk_box_set_spacing (GTK_BOX (vbox1), HILDON_MARGIN_DOUBLE);
 
     priv->help_text = gtk_label_new ("");
@@ -230,7 +230,7 @@ hildon_code_dialog_init                         (HildonCodeDialog *dialog)
 
     priv->entry = gtk_entry_new ();
     
-    GTK_WIDGET_UNSET_FLAGS (GTK_WIDGET (priv->entry), GTK_CAN_FOCUS);
+    gtk_widget_set_can_focus (GTK_WIDGET (priv->entry), FALSE);
     gtk_entry_set_invisible_char (GTK_ENTRY (priv->entry), g_utf8_get_char ("*"));
     gtk_entry_set_alignment (GTK_ENTRY (priv->entry), 1.0);
 
@@ -291,7 +291,7 @@ hildon_code_dialog_init                         (HildonCodeDialog *dialog)
     image1 = gtk_image_new_from_pixbuf (pixbuf);
     g_object_unref (G_OBJECT(pixbuf));
     gtk_container_add (GTK_CONTAINER (priv->buttons[3][2]), image1);
-    dialog_action_area1 = GTK_DIALOG (dialog)->action_area;
+    dialog_action_area1 = gtk_dialog_get_action_area (GTK_DIALOG (dialog));
     gtk_button_box_set_layout (GTK_BUTTON_BOX (dialog_action_area1),
 #if GTK_CHECK_VERSION(2,11,0) || defined(MAEMO_GTK)
                                GTK_BUTTONBOX_CENTER);
@@ -307,10 +307,8 @@ hildon_code_dialog_init                         (HildonCodeDialog *dialog)
     priv->buttons[4][0] = priv->buttons[4][1] = okButton;
 
     priv->im_context = gtk_im_multicontext_new();
-#ifdef MAEMO_GTK
-    g_object_set (G_OBJECT (priv->im_context), "hildon-input-mode",
-                  HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
-#endif
+
+    g_object_set (priv->im_context, "input-purpose", GTK_INPUT_PURPOSE_PIN, NULL);
 
     /*
        Connect signals.
@@ -347,7 +345,7 @@ hildon_code_dialog_init                         (HildonCodeDialog *dialog)
     g_signal_connect (G_OBJECT (okButton), "key-press-event",
                 G_CALLBACK(hildon_code_dialog_key_press_event), dialog);
     
-    gtk_widget_show_all (GTK_WIDGET (GTK_DIALOG (dialog)->vbox));
+    gtk_widget_show_all (GTK_WIDGET (gtk_dialog_get_content_area (GTK_DIALOG (dialog))));
 }
 
 static void
@@ -360,7 +358,7 @@ hildon_code_dialog_realize                      (GtkWidget *widget)
       (* GTK_WIDGET_CLASS (parent_class)->realize) (widget);
 
     gtk_im_context_set_client_window (GTK_IM_CONTEXT (priv->im_context),
-                                     GTK_WIDGET (dialog)->window);
+                                     gtk_widget_get_window (GTK_WIDGET (dialog)));
     gtk_im_context_focus_in (priv->im_context);
 }
 
@@ -437,8 +435,8 @@ hildon_code_dialog_button_clicked               (GtkButton *button,
     {
         gtk_editable_set_editable (GTK_EDITABLE (priv->entry), TRUE);
 
-        g_signal_emit_by_name (GTK_ENTRY (priv->entry)->im_context, "commit",
-                               number);
+//        g_signal_emit_by_name (GTK_ENTRY (priv->entry)->im_context, "commit",
+//                               number);
 
         gtk_editable_set_editable (GTK_EDITABLE (priv->entry), FALSE);
 
@@ -467,8 +465,8 @@ hildon_code_dialog_im_commit                    (GtkIMContext *im_context,
     {
         gtk_editable_set_editable (GTK_EDITABLE (priv->entry), TRUE);
 
-        g_signal_emit_by_name (GTK_ENTRY (priv->entry)->im_context, "commit",
-                               utf8);
+//        g_signal_emit_by_name (GTK_ENTRY (priv->entry)->im_context, "commit",
+//                               utf8);
 
         gtk_editable_set_editable (GTK_EDITABLE (priv->entry), FALSE);
 
@@ -521,7 +519,7 @@ hildon_code_dialog_key_press_event              (GtkWidget *widget,
     if (gtk_im_context_filter_keypress (priv->im_context, event))
         return TRUE;
 
-    if (event->keyval == GDK_BackSpace)
+    if (event->keyval == GDK_KEY_BackSpace)
     {
         hildon_code_dialog_backspace (dialog);
         return TRUE;
@@ -543,19 +541,19 @@ found:
     {
         switch (event->keyval)
         {
-            case GDK_Up:
+            case GDK_KEY_Up:
                 x = (x+4)%5;
                 break;
 
-            case GDK_Down:
+            case GDK_KEY_Down:
                 x = (x+1)%5;
                 break;
 
-            case GDK_Left:
+            case GDK_KEY_Left:
                 y = (y+2)%3;
                 break;
 
-            case GDK_Right:
+            case GDK_KEY_Right:
                 y = (y+1)%3;
                 break;
 
