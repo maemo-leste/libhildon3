@@ -174,8 +174,8 @@ static gboolean
 hildon_banner_map_event                         (GtkWidget *widget, 
                                                  GdkEventAny *event);
 
-static void 
-force_to_wrap_truncated                         (HildonBanner *banner);
+static void
+banner_set_label_size_request                   (HildonBanner *banner);
 
 static void
 hildon_banner_realize                           (GtkWidget *widget);
@@ -613,7 +613,6 @@ banner_do_set_text                              (HildonBanner *banner,
                                                  gboolean      is_markup)
 {
     HildonBannerPrivate *priv;
-    GtkRequisition req;
 
     priv = HILDON_BANNER_GET_PRIVATE (banner);
 
@@ -622,23 +621,12 @@ banner_do_set_text                              (HildonBanner *banner,
     } else {
         gtk_label_set_text (GTK_LABEL (priv->label), text);
     }
-    gtk_widget_set_size_request (priv->label, -1, -1);
-    gtk_widget_size_request (priv->label, &req);
-
-    force_to_wrap_truncated (banner);
 }
 
-/* force to wrap truncated label by setting explicit size request
- * see N#27000 and G#329646 */
-static void 
-force_to_wrap_truncated                         (HildonBanner *banner)
+static void
+banner_set_label_size_request                   (HildonBanner *banner)
 {
-    PangoLayout *layout;
-    int lines;
     int width;
-    int height = -1;
-    PangoRectangle logical;
-    GtkRequisition requisition;
     HildonBannerPrivate *priv = HILDON_BANNER_GET_PRIVATE (banner);
 
     g_return_if_fail (priv);
@@ -649,30 +637,7 @@ force_to_wrap_truncated                         (HildonBanner *banner)
     /* Force the label to compute its layout using the maximum
      * available width rather than its default one.
      */
-    gtk_widget_set_size_request (priv->label, width, height);
-    gtk_widget_size_request (priv->label, &requisition);
-
-    layout = gtk_label_get_layout (GTK_LABEL (priv->label));
-    pango_layout_get_extents (layout, NULL, &logical);
-
-    /* Now get the actual width needed by the pango layout */
-    width = PANGO_PIXELS (logical.width);
-
-    /* If the layout has now been wrapped and exceeds 3 lines, we truncate
-     * the rest of the label according to spec.
-     */
-    lines = pango_layout_get_line_count (layout);
-    if (pango_layout_is_wrapped (layout) && lines > 3) {
-        /* This calculation assumes that the same font is used
-         * throughout the banner -- this is usually the case on maemo
-         *
-         * FIXME: Pango >= 1.20 has pango_layout_set_height().
-         */
-        height = (PANGO_PIXELS (logical.height) * 3) / lines + 1;
-    }
-
-    /* Set the final width/height */
-    gtk_widget_set_size_request (priv->label, width, height);
+    gtk_widget_set_size_request (priv->label, width, -1);
 }
 
 static void
@@ -680,8 +645,9 @@ screen_size_changed                            (GdkScreen *screen,
                                                 GtkWindow *banner)
 
 {
-    if (GTK_WIDGET_VISIBLE (banner)) {
-        HildonBanner *hbanner = HILDON_BANNER (banner);
+    HildonBanner *hbanner = HILDON_BANNER (banner);
+    banner_set_label_size_request (hbanner);
+    if (gtk_widget_get_visible (GTK_WIDGET (banner))) {
         hildon_banner_bind_style (hbanner);
         reshow_banner (hbanner);
     }
@@ -726,6 +692,8 @@ hildon_banner_realize                           (GtkWidget *widget)
 
     screen = gtk_widget_get_screen (widget);
     g_signal_connect (screen, "size-changed", G_CALLBACK (screen_size_changed), widget);
+
+    banner_set_label_size_request (HILDON_BANNER (widget));
 }
 
 static void
@@ -756,12 +724,13 @@ hildon_banner_class_init                        (HildonBannerClass *klass)
     object_class->finalize = hildon_banner_finalize;
     object_class->set_property = hildon_banner_set_property;
     object_class->get_property = hildon_banner_get_property;
-    GTK_OBJECT_CLASS (klass)->destroy = hildon_banner_destroy;
-    widget_class->size_request = hildon_banner_size_request;
+
+    widget_class->get_preferred_width = hildon_banner_get_preferred_width;
     widget_class->map_event = hildon_banner_map_event;
     widget_class->realize = hildon_banner_realize;
     widget_class->unrealize = hildon_banner_unrealize;
     widget_class->button_press_event = hildon_banner_button_press_event;
+    widget_class->destroy = hildon_banner_destroy;
 #if defined(MAEMO_GTK)
     widget_class->map = hildon_banner_map;
 #endif
