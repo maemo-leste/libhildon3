@@ -127,8 +127,8 @@ hildon_color_button_key_pressed                 (GtkWidget *button,
                                                  gpointer data);
 
 static gint
-hildon_color_field_expose_event                 (GtkWidget *widget, 
-                                                 GdkEventExpose *event,
+hildon_color_field_draw_event                   (GtkWidget *widget, 
+                                                 cairo_t *cr,
                                                  HildonColorButton *cb);
 
 static gboolean
@@ -136,8 +136,8 @@ hildon_color_button_mnemonic_activate           (GtkWidget *widget,
                                                  gboolean group_cycling);
 
 static void
-draw_grid                                       (GdkDrawable *drawable, 
-                                                 GdkGC *gc, 
+draw_grid                                       (GdkWindow *drawable, 
+                                                 cairo_t *cr, 
                                                  int x, 
                                                  int y, 
                                                  gint w, 
@@ -242,8 +242,8 @@ hildon_color_button_class_init                  (HildonColorButtonClass *klass)
  * insensitive. Actually, we should generate that pixbuf once and 
  * just render it over later... */
 static void
-draw_grid                                       (GdkDrawable *drawable, 
-                                                 GdkGC *gc, 
+draw_grid                                       (GdkWindow *drawable, 
+                                                 cairo_t *cr, 
                                                  int x, 
                                                  int y,
                                                  gint w, 
@@ -253,19 +253,28 @@ draw_grid                                       (GdkDrawable *drawable,
     int currenty;
     for (currenty = y; currenty <= h; currenty++)
         for (currentx = ((currenty % 2 == 0) ? x : x + 1); currentx <= w; currentx += 2)
-            gdk_draw_point (drawable, gc, currentx, currenty);
+            gdk_draw_point (drawable, cr, currentx, currenty);
 }
 
 /* Handle exposure events for the color picker's drawing area */
 static gint
-hildon_color_field_expose_event                 (GtkWidget *widget, 
-                                                 GdkEventExpose *event,
+hildon_color_field_draw_event                   (GtkWidget *widget, 
+                                                 cairo_t *cr,
                                                  HildonColorButton *cb)
 {
     HildonColorButtonPrivate *priv = HILDON_COLOR_BUTTON_GET_PRIVATE (cb);
     GdkColor outer_border, inner_border;
+    GtkStyleContext  *context;
+    GtkStateFlags     state;
+    GdkRGBA          *bg;
 
     g_assert (priv);
+
+    context = gtk_widget_get_style_context (widget);
+    state = gtk_widget_get_state_flags (widget);
+    gtk_style_context_get (context, state,
+                           "background-color", &bg,
+                           NULL);
 
     /* Create the outer border color */
     outer_border.pixel = 0;
@@ -280,46 +289,44 @@ hildon_color_field_expose_event                 (GtkWidget *widget,
     inner_border.green = INNER_BORDER_GREEN;
 
     /* serve the outer border color to the Graphic Context */
-    gdk_gc_set_rgb_fg_color (priv->gc, &outer_border);
+    //gdk_gc_set_rgb_fg_color (priv->gc, &outer_border);
+    gdk_cairo_set_source_color (cr, &outer_border);
     /* draw the outer border as a filled rectangle */
-    gdk_draw_rectangle (widget->window,
-            (GTK_WIDGET_IS_SENSITIVE (widget)) ?  priv->gc : widget->style->bg_gc [GTK_STATE_INSENSITIVE],
-            TRUE,
+    cairo_rectangle (cr,
             0, 
             0,
-            widget->allocation.width,
-            widget->allocation.height);
+            gtk_widget_get_allocated_width (widget),
+            gtk_widget_get_allocated_height (widget));
+    cairo_fill (cr);
 
     /* serve the inner border color to the Graphic Context */
-    gdk_gc_set_rgb_fg_color (priv->gc, &inner_border);
+    gdk_cairo_set_source_color (cr, &inner_border);
 
     /* draw the inner border as a filled rectangle */
-    gdk_draw_rectangle (widget->window,
-            priv->gc,
-            TRUE,
+    cairo_rectangle (cr,
             OUTER_BORDER_THICKNESS, 
             OUTER_BORDER_THICKNESS,
-            widget->allocation.width - (OUTER_BORDER_THICKNESS * 2),
-            widget->allocation.height - (OUTER_BORDER_THICKNESS * 2));
+            gtk_widget_get_allocated_width (widget) - (OUTER_BORDER_THICKNESS * 2),
+            gtk_widget_get_allocated_height (widget) - (OUTER_BORDER_THICKNESS * 2));
+    cairo_fill (cr);
 
     /* serve the actual color to the Graphic Context */
-    gdk_gc_set_rgb_fg_color(priv->gc, &priv->color);
+    gdk_cairo_set_source_color (cr, &priv->color);
 
     /* draw the actual rectangle */
-    gdk_draw_rectangle(widget->window,
-            priv->gc,
-            TRUE,
+    cairo_rectangle (cr,
             INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS,
             INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS,
-            widget->allocation.width - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2),
-            widget->allocation.height - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2));
+            gtk_widget_get_allocated_width (widget) - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2),
+            gtk_widget_get_allocated_height (widget) - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2));
+    cairo_fill (cr);
 
-    if (! GTK_WIDGET_IS_SENSITIVE (widget)) {
-        draw_grid (GDK_DRAWABLE (widget->window), widget->style->bg_gc [GTK_STATE_INSENSITIVE], 
+    if (! gtk_widget_is_sensitive (widget)) {
+        draw_grid (GDK_WINDOW (gtk_widget_get_window (widget)), cr, 
                 INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS,
                 INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS,
-                widget->allocation.width  - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2) + 2,
-                widget->allocation.height - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2) + 2);
+                gtk_widget_get_allocated_width (widget)  - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2) + 2,
+                gtk_widget_get_allocated_height (widget) - ((INNER_BORDER_THICKNESS + OUTER_BORDER_THICKNESS)*2) + 2);
     }
 
     return FALSE;
@@ -352,8 +359,8 @@ hildon_color_button_init                        (HildonColorButton *cb)
                                  HILDON_ICON_PIXEL_SIZE_FINGER);
 
     /* Connect the callback function for exposure event */
-    g_signal_connect (drawing_area, "expose-event",
-            G_CALLBACK (hildon_color_field_expose_event), cb);
+    g_signal_connect (drawing_area, "draw",
+            G_CALLBACK (hildon_color_field_draw_event), cb);
 
     /* Connect to callback function for key press event */
     g_signal_connect (G_OBJECT(cb), "key-press-event",
@@ -393,7 +400,7 @@ hildon_color_button_realize                     (GtkWidget *widget)
 
     GTK_WIDGET_CLASS (parent_class)->realize (widget);
 
-    priv->gc = gdk_gc_new (widget->window);
+    priv->gc =  gdk_cairo_create (gtk_widget_get_window (widget));
 }
 
 static void

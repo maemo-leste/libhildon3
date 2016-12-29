@@ -37,7 +37,7 @@ struct                                          _HildonColorButtonPrivate
     gboolean popped;
 
     GdkColor color;
-    GdkGC *gc;
+    cairo_t *gc;
 };
 
 #endif                                          /* __HILDON_COLOR_BUTTON_PRIVATE_H__ */
