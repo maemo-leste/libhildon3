@@ -84,6 +84,15 @@ hildon_color_chooser_dialog_init                (HildonColorChooserDialog *objec
 static void 
 hildon_color_chooser_dialog_class_init          (HildonColorChooserDialogClass *klass);
 
+static void
+hildon_color_chooser_dialog_get_preferred_width (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+static void
+hildon_color_chooser_dialog_get_preferred_height(GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
+
 static void 
 hildon_color_chooser_dialog_size_request        (GtkWidget *widget, 
                                                  GtkRequisition *req);
@@ -117,11 +126,11 @@ hildon_color_chooser_dialog_key_release_event   (GtkWidget *widget,
                                                  GdkEventKey *event);
 
 static void 
-hildon_color_chooser_dialog_destroy             (GtkObject *object);
+hildon_color_chooser_dialog_destroy             (GtkWidget *widget);
 
 static gboolean 
-hildon_color_chooser_dialog_area_expose         (GtkWidget *widget, 
-                                                 GdkEventExpose *event, 
+hildon_color_chooser_dialog_area_draw           (GtkWidget *widget, 
+                                                 cairo_t *cr,
                                                  gpointer data);
 
 static gboolean 
@@ -184,19 +193,18 @@ hildon_color_chooser_dialog_init                (HildonColorChooserDialog *objec
 {
     HildonColorChooserDialogPrivate *priv = HILDON_COLOR_CHOOSER_DIALOG_GET_PRIVATE (object);
 
-    gtk_dialog_set_has_separator (GTK_DIALOG (object), FALSE);
     gtk_window_set_title (GTK_WINDOW (object), _("ecdg_ti_colour_selector"));
 
     g_assert (priv);
 
-    priv->hbox = gtk_hbox_new (FALSE, 0);
-    priv->vbox = gtk_vbox_new (FALSE, 0);
+    priv->hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+    priv->vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     priv->chooser = hildon_color_chooser_new ();
 
     gtk_box_pack_start (GTK_BOX (priv->hbox), priv->chooser, TRUE, TRUE, 0);
     gtk_box_pack_end (GTK_BOX (priv->hbox), priv->vbox, FALSE, FALSE, 0);
 
-    gtk_box_pack_start (GTK_BOX (GTK_DIALOG (object)->vbox), priv->hbox, TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (object))), priv->hbox, TRUE, TRUE, 0);
 
 
     priv->align_custom = gtk_alignment_new (0.5, 1.0, 0.0, 0.0);
@@ -208,7 +216,7 @@ hildon_color_chooser_dialog_init                (HildonColorChooserDialog *objec
     gtk_container_add (GTK_CONTAINER (priv->align_custom), priv->area_custom);
     gtk_container_add (GTK_CONTAINER (priv->align_defined), priv->area_defined);
 
-    priv->separator = gtk_hseparator_new ();
+    priv->separator = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
 
     gtk_box_pack_start (GTK_BOX (priv->vbox), priv->align_defined, FALSE, FALSE, 0);
     gtk_box_pack_start (GTK_BOX (priv->vbox), priv->separator, FALSE, FALSE, 0);
@@ -221,10 +229,10 @@ hildon_color_chooser_dialog_init                (HildonColorChooserDialog *objec
             "query-tooltip", G_CALLBACK (hildon_color_chooser_dialog_insensitive_press), object);
 
     g_signal_connect (G_OBJECT (priv->area_custom), 
-            "expose-event", G_CALLBACK (hildon_color_chooser_dialog_area_expose), object);
+            "draw", G_CALLBACK (hildon_color_chooser_dialog_area_draw), object);
 
     g_signal_connect (G_OBJECT (priv->area_defined), 
-            "expose-event", G_CALLBACK (hildon_color_chooser_dialog_area_expose), object);
+            "draw", G_CALLBACK (hildon_color_chooser_dialog_area_draw), object);
 
     g_signal_connect (G_OBJECT (priv->area_custom), 
             "button-press-event", G_CALLBACK (hildon_color_chooser_dialog_area_button_press), object);
@@ -254,11 +262,12 @@ static void
 hildon_color_chooser_dialog_class_init          (HildonColorChooserDialogClass *klass)
 {
     GtkWidgetClass *widget_klass = GTK_WIDGET_CLASS (klass);
-    GtkObjectClass *object_klass = GTK_OBJECT_CLASS (klass);
+    GObjectClass *object_klass = G_OBJECT_CLASS (klass);
     gchar tmp[32];
     gint i;
 
-    widget_klass->size_request      = hildon_color_chooser_dialog_size_request;
+    widget_klass->get_preferred_width  = hildon_color_chooser_dialog_get_preferred_width;
+    widget_klass->get_preferred_height = hildon_color_chooser_dialog_get_preferred_height;
     widget_klass->size_allocate     = hildon_color_chooser_dialog_size_allocate;
     widget_klass->realize           = hildon_color_chooser_dialog_realize;
     widget_klass->unrealize         = hildon_color_chooser_dialog_unrealize;
@@ -267,9 +276,7 @@ hildon_color_chooser_dialog_class_init          (HildonColorChooserDialogClass *
     widget_klass->show_all          = hildon_color_chooser_dialog_show_all;
     widget_klass->key_press_event   = hildon_color_chooser_dialog_key_press_event;
     widget_klass->key_release_event = hildon_color_chooser_dialog_key_release_event;
-
-
-    object_klass->destroy           = hildon_color_chooser_dialog_destroy;
+    widget_klass->destroy           = hildon_color_chooser_dialog_destroy;
 
     parent_class = g_type_class_peek_parent (klass);
 
@@ -314,6 +321,30 @@ hildon_color_chooser_dialog_class_init          (HildonColorChooserDialogClass *
     g_type_class_add_private (object_klass, sizeof (HildonColorChooserDialogPrivate));
 }
 
+static void
+hildon_color_chooser_dialog_get_preferred_width (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_color_chooser_dialog_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_color_chooser_dialog_get_preferred_height(GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_color_chooser_dialog_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
+
 static void 
 hildon_color_chooser_dialog_size_request        (GtkWidget *widget, 
                                                  GtkRequisition *req)
@@ -326,7 +357,7 @@ hildon_color_chooser_dialog_size_request        (GtkWidget *widget,
 
     gtk_box_set_spacing (GTK_BOX (priv->hbox), priv->style_info.cont_sizes.right);
     gtk_box_set_spacing (GTK_BOX (priv->vbox), priv->style_info.cont_sizes.top);
-    gtk_box_set_spacing (GTK_BOX (GTK_DIALOG (widget)->vbox), priv->style_info.cont_sizes.bottom);
+    gtk_box_set_spacing (GTK_BOX (gtk_dialog_get_content_area (GTK_DIALOG (widget))), priv->style_info.cont_sizes.bottom);
 
     gtk_widget_set_size_request (priv->area_custom,
             (priv->style_info.radio_sizes.left + 
@@ -352,7 +383,7 @@ hildon_color_chooser_dialog_size_request        (GtkWidget *widget,
             (priv->style_info.num_buttons.right-1) * 
             priv->style_info.radio_sizes.top);
 
-    GTK_WIDGET_CLASS (parent_class)->size_request (widget, req);
+    gtk_widget_get_preferred_size (widget, req, NULL);
 }
 
 static void 
@@ -368,7 +399,7 @@ hildon_color_chooser_dialog_size_allocate       (GtkWidget *widget,
 
     GTK_WIDGET_CLASS (parent_class)->size_allocate (widget, alloc);
 
-    if (GTK_WIDGET_REALIZED (widget)) {
+    if (gtk_widget_get_realized (widget)) {
         tmp  = (priv->style_info.num_buttons.left * priv->style_info.num_buttons.right);
         tmp2 = (priv->style_info.num_buttons.top * priv->style_info.num_buttons.bottom);
 
@@ -388,7 +419,8 @@ hildon_color_chooser_dialog_size_allocate       (GtkWidget *widget,
             rect.width = priv->style_info.radio_sizes.left;
             rect.height = priv->style_info.radio_sizes.right;
 
-            gdk_gc_set_clip_rectangle (priv->gc_array[i], &rect);
+            gdk_cairo_rectangle (priv->gc_array[i], &rect);
+            cairo_clip (priv->gc_array[i]);
         }
 
         for (i = 0; i < tmp2; i++) {
@@ -406,7 +438,9 @@ hildon_color_chooser_dialog_size_allocate       (GtkWidget *widget,
             rect.width = priv->style_info.radio_sizes.left;
             rect.height = priv->style_info.radio_sizes.right;
 
-            gdk_gc_set_clip_rectangle (priv->gc_array[i + tmp], &rect);
+            gdk_cairo_rectangle (priv->gc_array[i + tmp], &rect);
+            cairo_clip (priv->gc_array[i + tmp]);
+
         }
     }
 }
@@ -427,14 +461,14 @@ hildon_color_chooser_dialog_realize             (GtkWidget *widget)
         (priv->style_info.num_buttons.top * priv->style_info.num_buttons.bottom);
 
     for (i = 0; i < tmp; i++) {
-        priv->gc_array[i] = gdk_gc_new (widget->window);
+        priv->gc_array[i] = gdk_cairo_create (gtk_widget_get_window (widget));
     }
 
     tmp  = (priv->style_info.num_buttons.left * priv->style_info.num_buttons.right);
     tmp2 = (priv->style_info.num_buttons.top * priv->style_info.num_buttons.bottom);
 
     for (i = 0; i < tmp; i++) {
-        gdk_gc_set_rgb_fg_color (priv->gc_array[i], &priv->colors_defined[i]);
+        gdk_cairo_set_source_color (priv->gc_array[i], &priv->colors_defined[i]);
 
         rect.x = ((i % priv->style_info.num_buttons.left) * 
                 (priv->style_info.radio_sizes.left + 
@@ -451,11 +485,13 @@ hildon_color_chooser_dialog_realize             (GtkWidget *widget)
         rect.width = priv->style_info.radio_sizes.left;
         rect.height = priv->style_info.radio_sizes.right;
 
-        gdk_gc_set_clip_rectangle (priv->gc_array[i], &rect);
+        gdk_cairo_rectangle (priv->gc_array[i], &rect);
+        cairo_clip (priv->gc_array[i]);
+
     }
 
     for (i = 0; i < tmp2; i++) {
-        gdk_gc_set_rgb_fg_color (priv->gc_array[i + tmp], &priv->colors_custom[i]);
+        gdk_cairo_set_source_color (priv->gc_array[i + tmp], &priv->colors_custom[i]);
 
         rect.x = ((i % priv->style_info.num_buttons.top) * 
                 (priv->style_info.radio_sizes.left + 
@@ -472,7 +508,9 @@ hildon_color_chooser_dialog_realize             (GtkWidget *widget)
         rect.width = priv->style_info.radio_sizes.left;
         rect.height = priv->style_info.radio_sizes.right;
 
-        gdk_gc_set_clip_rectangle (priv->gc_array[i + tmp], &rect);
+        gdk_cairo_rectangle (priv->gc_array[i + tmp], &rect);
+        cairo_clip (priv->gc_array[i + tmp]);
+
     }
 }
 
@@ -532,7 +570,7 @@ hildon_color_chooser_dialog_style_set           (GtkWidget *widget,
         } if (priv->colors_defined) {
             g_free (priv->colors_defined);
         } if (priv->gc_array) {
-            if (GTK_WIDGET_REALIZED (widget)) {
+            if (gtk_widget_get_realized (widget)) {
                 tmpn = (priv->style_info.last_num_buttons.left * priv->style_info.last_num_buttons.right) +
                     (priv->style_info.last_num_buttons.top * priv->style_info.last_num_buttons.bottom);
 
@@ -556,10 +594,10 @@ hildon_color_chooser_dialog_style_set           (GtkWidget *widget,
         tmpn = (priv->style_info.num_buttons.left * priv->style_info.num_buttons.right) +
             (priv->style_info.num_buttons.top * priv->style_info.num_buttons.bottom);
 
-        priv->gc_array = (GdkGC **) g_malloc0 (sizeof (GdkGC *) * tmpn);
-	if (GTK_WIDGET_REALIZED (widget)) {
+        priv->gc_array = (cairo_t **) g_malloc0 (sizeof (cairo_t *) * tmpn);
+	if (gtk_widget_get_realized (widget)) {
                 for (i = 0; i < tmpn; i++) {
-		    priv->gc_array[i] = gdk_gc_new (widget->window);
+		    priv->gc_array[i] = gdk_cairo_create (gtk_widget_get_window (widget));
                 }
 	}
 
@@ -613,10 +651,10 @@ hildon_color_chooser_dialog_style_set           (GtkWidget *widget,
         }
     }
 
-    if (GTK_WIDGET_REALIZED (widget)) {
+    if (gtk_widget_get_realized (widget)) {
         for (i = 0; i < (priv->style_info.num_buttons.left * 
                     priv->style_info.num_buttons.right); i++) {
-            gdk_gc_set_rgb_fg_color (priv->gc_array[i], &priv->colors_defined[i]);
+            gdk_cairo_set_source_color (priv->gc_array[i], &priv->colors_defined[i]);
         }
     }
 
@@ -746,9 +784,9 @@ hildon_color_chooser_dialog_key_release_event   (GtkWidget *widget,
 }
 
 static void 
-hildon_color_chooser_dialog_destroy             (GtkObject *object)
+hildon_color_chooser_dialog_destroy             (GtkWidget *widget)
 {
-    HildonColorChooserDialogPrivate *priv = HILDON_COLOR_CHOOSER_DIALOG_GET_PRIVATE (object);
+    HildonColorChooserDialogPrivate *priv = HILDON_COLOR_CHOOSER_DIALOG_GET_PRIVATE (widget);
 
     gchar key[128], color[13];
     int i, tmp;
@@ -783,7 +821,7 @@ hildon_color_chooser_dialog_destroy             (GtkObject *object)
         priv->colors_custom = NULL;
     }
 
-    GTK_OBJECT_CLASS (parent_class)->destroy (object);
+    GTK_WIDGET_CLASS (parent_class)->destroy (widget);
 }
 
 /**
@@ -837,8 +875,8 @@ hildon_color_chooser_dialog_set_color           (HildonColorChooserDialog *dialo
 
     if (found == -1) {
         priv->colors_custom[tmp2-1] = *color;
-        if (GTK_WIDGET_REALIZED (GTK_WIDGET (dialog))) {
-            gdk_gc_set_rgb_fg_color (priv->gc_array[tmp2-1], color);
+        if (gtk_widget_get_realized (GTK_WIDGET (dialog))) {
+            gdk_cairo_set_source_color (priv->gc_array[tmp2-1], color);
         }
         hildon_color_chooser_dialog_set_color_num (dialog, tmp2 - 1);
     } else {
@@ -847,15 +885,18 @@ hildon_color_chooser_dialog_set_color           (HildonColorChooserDialog *dialo
 }
 
 static gboolean 
-hildon_color_chooser_dialog_area_expose         (GtkWidget *widget, 
-                                                 GdkEventExpose *event, 
+hildon_color_chooser_dialog_area_draw           (GtkWidget *widget, 
+                                                 cairo_t *cr,
                                                  gpointer data)
 {
     HildonColorChooserDialogPrivate *priv = HILDON_COLOR_CHOOSER_DIALOG_GET_PRIVATE (data);
 
     int i, num_selected, tot_w, tot_h, spacing, brd, x, y;
-    GdkGC **start_gc;
+    cairo_t **start_gc;
     int tmp, w, h;
+    GtkStyleContext  *context;
+    GdkRGBA          *bg_selected, *bg_normal;
+    GdkRGBA white = {1, 1, 1, 1};
 
     g_assert (priv);
 
@@ -879,33 +920,41 @@ hildon_color_chooser_dialog_area_expose         (GtkWidget *widget,
     tot_w = priv->style_info.radio_sizes.left + 2 * brd;
     tot_h = priv->style_info.radio_sizes.right + 2 * brd;
 
+    context = gtk_widget_get_style_context (widget);
+    gtk_style_context_get (context, GTK_STATE_FLAG_SELECTED,
+                           "background-color", &bg_selected,
+                           NULL);
+    gtk_style_context_get (context, GTK_STATE_FLAG_SELECTED,
+                           "background-color", &bg_normal,
+                           NULL);
+
     for (i = 0; i < tmp; i++) {
         x = ((i % w) * (tot_w + spacing));
         y = ((i / w) * (tot_h + spacing));
 
-        gdk_draw_rectangle (widget->window,
-                (i == num_selected) ? widget->style->bg_gc[GTK_STATE_SELECTED] : widget->style->bg_gc[GTK_STATE_NORMAL],
-                TRUE,
+        gdk_cairo_set_source_rgba (cr, (i == num_selected) ? bg_selected : bg_normal);
+        cairo_rectangle (cr,
                 (i == num_selected) ? x : x + 2,  
                 (i == num_selected) ? y : y + 2,
                 (i == num_selected) ? tot_w : tot_w - 4,
                 (i == num_selected) ? tot_h : tot_h - 4);
+        cairo_fill (cr);
 
-        gdk_draw_rectangle(widget->window,
-                (i == num_selected) ? widget->style->bg_gc[GTK_STATE_NORMAL] : widget->style->white_gc,
-                TRUE,
+        gdk_cairo_set_source_rgba (cr, (i == num_selected) ? bg_normal : &white);
+        cairo_rectangle (cr,
                 x + 3,  
                 y + 3,
                 tot_w - 6,
                 tot_h - 6);
+        cairo_fill (cr);
 
-        gdk_draw_rectangle(widget->window,
-                start_gc [i],
-                TRUE,
+//        gdk_cairo_set_source_rgba (cr, start_gc [i]);
+        cairo_rectangle (start_gc [i],
                 x + 3 + 1,  
                 y + 3 + 1,
                 tot_w - 6 - 2,
                 tot_h - 6 - 2);
+        cairo_fill (cr);
     }
 
     return FALSE;
@@ -982,7 +1031,7 @@ hildon_color_chooser_dialog_color_changed       (HildonColorChooser *chooser,
     if (priv->selected >= tmp) {
         priv->colors_custom[priv->selected - tmp] = color;
 
-        gdk_gc_set_rgb_fg_color (priv->gc_array[priv->selected], &priv->colors_custom[priv->selected - tmp]);
+        gdk_cairo_set_source_color (priv->gc_array[priv->selected], &priv->colors_custom[priv->selected - tmp]);
         gtk_widget_queue_draw (priv->area_custom);
 
         if (priv->gconf_client) {

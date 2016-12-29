@@ -57,7 +57,7 @@ struct                                          _HildonColorChooserDialogPrivate
 
     GdkColor *colors_custom, *colors_defined;
     GdkColor color;
-    GdkGC **gc_array;
+    cairo_t **gc_array;
 
     gint selected;
 
