@@ -99,11 +99,13 @@ static void
 hildon_find_toolbar_emit_close                  (GtkButton *button, 
                                                  gpointer self);
 
+#if 0
 #ifdef MAEMO_GTK 
 static void
 hildon_find_toolbar_emit_invalid_input          (GtkEntry *entry, 
                                                  GtkInvalidInputType type, 
                                                  gpointer self);
+#endif
 #endif
 
 static void
@@ -266,7 +268,7 @@ hildon_find_toolbar_get_property                (GObject *object,
             break;
 
         case PROP_COLUMN:
-            c_n = gtk_combo_box_entry_get_text_column (priv->entry_combo_box);
+            c_n = gtk_combo_box_get_entry_text_column (priv->entry_combo_box);
             g_value_set_int (value, c_n);
             break;
 
@@ -316,7 +318,7 @@ hildon_find_toolbar_set_property                (GObject *object,
             break;
 
         case PROP_COLUMN:
-            gtk_combo_box_entry_set_text_column (priv->entry_combo_box,
+            gtk_combo_box_set_entry_text_column (priv->entry_combo_box,
                     g_value_get_int (value));
             break;
 
@@ -336,12 +338,12 @@ hildon_find_toolbar_set_property                (GObject *object,
                    combobox popup arrow, so we'll just recreate the filter. */
                 hildon_find_toolbar_apply_filter (self, model);
 
-                if (gtk_combo_box_entry_get_text_column (priv->entry_combo_box) == -1)
+                if (gtk_combo_box_get_entry_text_column (priv->entry_combo_box) == -1)
                 {
                     /* FIXME: This is only for backwards compatibility, although
                        probably nothing actually relies on it. The behavior was only
                        an accidental side effect of original code */
-                    gtk_combo_box_entry_set_text_column (priv->entry_combo_box, 0);
+                    gtk_combo_box_set_entry_text_column (priv->entry_combo_box, 0);
                 }
             }
             break;
@@ -463,21 +465,24 @@ static void
 hildon_find_toolbar_emit_close                  (GtkButton *button, 
                                                  gpointer self)
 {
+#if 0
 #ifdef MAEMO_GTK 
     HildonFindToolbarPrivate *priv = HILDON_FIND_TOOLBAR_GET_PRIVATE (self);
     g_assert (priv);
 
     GtkWidget *entry = gtk_bin_get_child (GTK_BIN (priv->entry_combo_box));
-    if (GTK_WIDGET_HAS_FOCUS (entry))
+    if (gtk_widget_has_focus (entry))
     {
         hildon_gtk_im_context_hide (GTK_ENTRY (entry)->im_context);
     }
+#endif
 #endif
 
     /* Clicked close button */
     g_signal_emit (self, HildonFindToolbar_signal [CLOSE], 0);
 }
 
+#if 0
 #ifdef MAEMO_GTK 
 static void
 hildon_find_toolbar_emit_invalid_input          (GtkEntry *entry, 
@@ -487,6 +492,7 @@ hildon_find_toolbar_emit_invalid_input          (GtkEntry *entry,
     if(type == GTK_INVALID_INPUT_MAX_CHARS_REACHED)
         g_signal_emit (self, HildonFindToolbar_signal [INVALID_INPUT], 0);
 }
+#endif
 #endif
 
 static void
@@ -656,6 +662,8 @@ hildon_find_toolbar_class_init                  (HildonFindToolbarClass *klass)
                 g_signal_accumulator_true_handled, NULL, 
                 _hildon_marshal_BOOLEAN__VOID,
                 G_TYPE_BOOLEAN, 0);
+
+    g_type_class_add_private (object_class, sizeof (HildonFindToolbarPrivate));
 }
 
 static void
@@ -663,16 +671,20 @@ hildon_find_toolbar_init                        (HildonFindToolbar *self)
 {
     GtkToolItem *label_container;
     GtkToolItem *entry_combo_box_container;
-    GtkAlignment *alignment;
+    GtkSizeGroup *size_group;
 
     HildonFindToolbarPrivate *priv = HILDON_FIND_TOOLBAR_GET_PRIVATE (self);
     g_assert (priv);
 
+    size_group = gtk_size_group_new (GTK_SIZE_GROUP_VERTICAL);
+
     /* Create the label */
     priv->label = gtk_label_new (_("ecdg_ti_find_toolbar_label"));
 
-    gtk_misc_set_padding (GTK_MISC (priv->label), FIND_LABEL_XPADDING,
-            FIND_LABEL_YPADDING);
+    gtk_widget_set_margin_start (priv->label, FIND_LABEL_XPADDING);
+    gtk_widget_set_margin_end (priv->label, FIND_LABEL_XPADDING);
+    gtk_widget_set_margin_top (priv->label, FIND_LABEL_YPADDING);
+    gtk_widget_set_margin_bottom (priv->label, FIND_LABEL_YPADDING);
 
     label_container = gtk_tool_item_new ();
     gtk_container_add (GTK_CONTAINER (label_container), 
@@ -682,22 +694,22 @@ hildon_find_toolbar_init                        (HildonFindToolbar *self)
     gtk_toolbar_insert (GTK_TOOLBAR (self), label_container, -1);
 
     /* ComboBoxEntry for search prefix string / history list */
-    priv->entry_combo_box = GTK_COMBO_BOX_ENTRY (gtk_combo_box_entry_new ());
-
+    priv->entry_combo_box = GTK_COMBO_BOX (gtk_combo_box_new_with_entry ());
+    gtk_widget_set_halign(GTK_WIDGET (priv->entry_combo_box), GTK_ALIGN_START);
+    gtk_widget_set_valign(GTK_WIDGET (priv->entry_combo_box), GTK_ALIGN_CENTER);
+#if 0
 #ifdef MAEMO_GTK
     g_signal_connect (hildon_find_toolbar_get_entry(priv),
             "invalid_input", 
             G_CALLBACK(hildon_find_toolbar_emit_invalid_input), self);
 #endif
+#endif
 
     entry_combo_box_container = gtk_tool_item_new ();
-    alignment = GTK_ALIGNMENT (gtk_alignment_new (0, 0.5, 1, 0));
 
     gtk_tool_item_set_expand (entry_combo_box_container, TRUE);
-    gtk_container_add (GTK_CONTAINER (alignment),
-            GTK_WIDGET (priv->entry_combo_box));
     gtk_container_add (GTK_CONTAINER (entry_combo_box_container),
-            GTK_WIDGET (alignment));
+            GTK_WIDGET (priv->entry_combo_box));
     gtk_widget_show_all(GTK_WIDGET (entry_combo_box_container));
     gtk_toolbar_insert (GTK_TOOLBAR (self), entry_combo_box_container, -1);
     g_signal_connect (hildon_find_toolbar_get_entry (priv),
@@ -719,9 +731,14 @@ hildon_find_toolbar_init                        (HildonFindToolbar *self)
             G_CALLBACK(hildon_find_toolbar_emit_close), self);
     gtk_widget_show_all(GTK_WIDGET(priv->close_button));
     gtk_toolbar_insert (GTK_TOOLBAR(self), priv->close_button, -1);
-    if ( GTK_WIDGET_CAN_FOCUS( GTK_BIN(priv->close_button)->child) )
-        GTK_WIDGET_UNSET_FLAGS(
-                GTK_BIN(priv->close_button)->child, GTK_CAN_FOCUS);
+    if ( gtk_widget_get_can_focus ( gtk_bin_get_child (GTK_BIN (priv->close_button)) ) )
+        gtk_widget_set_can_focus (
+                gtk_bin_get_child (GTK_BIN (priv->close_button)), FALSE);
+
+    gtk_size_group_add_widget (size_group, GTK_WIDGET(priv->entry_combo_box));
+    gtk_size_group_add_widget (size_group, GTK_WIDGET(priv->separator));
+    gtk_size_group_add_widget (size_group, GTK_WIDGET(priv->close_button));
+    g_object_unref (size_group);
 }
 
 /**
