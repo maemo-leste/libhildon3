@@ -63,6 +63,16 @@ hildon_color_chooser_class_init                 (HildonColorChooserClass *klass)
 static void 
 hildon_color_chooser_dispose                    (HildonColorChooser *self);
 
+static void
+hildon_color_chooser_get_preferred_width        (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_color_chooser_get_preferred_height       (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
+
 static void 
 hildon_color_chooser_size_request               (GtkWidget *widget, 
                                                  GtkRequisition *req);
@@ -271,7 +281,8 @@ hildon_color_chooser_class_init                 (HildonColorChooserClass *klass)
     object_class->get_property          = hildon_color_chooser_get_property;
     object_class->set_property          = hildon_color_chooser_set_property;
 
-    widget_class->size_request          = hildon_color_chooser_size_request;
+    widget_class->get_preferred_width   = hildon_color_chooser_get_preferred_width;
+    widget_class->get_preferred_height  = hildon_color_chooser_get_preferred_height;
     widget_class->size_allocate         = hildon_color_chooser_size_allocate;
     widget_class->realize               = hildon_color_chooser_realize;
     widget_class->unrealize             = hildon_color_chooser_unrealize;
@@ -345,6 +356,30 @@ hildon_color_chooser_dispose                    (HildonColorChooser *sel)
     }
 
     G_OBJECT_CLASS (parent_class)->dispose (G_OBJECT (sel));
+}
+
+static void
+hildon_color_chooser_get_preferred_width        (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_color_chooser_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_color_chooser_get_preferred_height       (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_color_chooser_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
 }
 
 static void
@@ -517,7 +552,8 @@ hildon_color_chooser_draw                       (GtkWidget *widget,
 
     get_border (widget, "graphic_border", &graphical_border);
     
-    if (event->area.width || event->area.height) {
+//    if (event->area.width || event->area.height) {
+    if (gtk_widget_get_allocated_width (widget) || gtk_widget_get_allocated_height (widget)) {
 
         cairo_set_source_rgb (cr, 0, 0, 0);
         cairo_rectangle (cr, priv->hba.x - 2, priv->hba.y - 2, priv->hba.width + 3, priv->hba.height + 3);
@@ -544,10 +580,10 @@ hildon_color_chooser_draw                       (GtkWidget *widget,
 
     } else {
         /* clip hue bar region */
-        area.x = event->area.x;
-        area.y = event->area.y;
-        area.w = event->area.width;
-        area.h = event->area.height;
+        area.x = 0;//event->area.x;
+        area.y = 0;//event->area.y;
+        area.w = gtk_widget_get_allocated_width (widget);//event->area.width;
+        area.h = gtk_widget_get_allocated_height (widget);//event->area.height;
 
         inline_clip_to_alloc (&area, &priv->hba);
 
@@ -557,10 +593,10 @@ hildon_color_chooser_draw                       (GtkWidget *widget,
             inline_draw_hue_bar_dimmed (widget, area.x, area.y, area.w, area.h, priv->hba.y, priv->hba.height);
         }
         
-        area.x = event->area.x;
-        area.y = event->area.y;
-        area.w = event->area.width;
-        area.h = event->area.height;
+        area.x = 0;//event->area.x;
+        area.y = 0;//event->area.y;
+        area.w = gtk_widget_get_allocated_width (widget);//event->area.width;
+        area.h = gtk_widget_get_allocated_height (widget);//event->area.height;
 
         inline_clip_to_alloc (&area, &priv->spa);
 
@@ -1358,9 +1394,15 @@ hildon_color_chooser_get_color                  (HildonColorChooser *chooser,
     color->green = ((rgb[1] >> 8) + ((rgb2[1] >> 8) * (0xffff - priv->currsat) / 0xffff)) * priv->currval / 0xffff;
     color->blue  = ((rgb[2] >> 8) + ((rgb2[2] >> 8) * (0xffff - priv->currsat) / 0xffff)) * priv->currval / 0xffff;
 
-    color->pixel = ((color->red >> (16 - system_visual->red_prec)) << system_visual->red_shift) |
-        ((color->green >> (16 - system_visual->green_prec)) << system_visual->green_shift) |
-        ((color->blue >> (16 - system_visual->blue_prec)) << system_visual->blue_shift);
+   //FIXME: Look for a simpler, cleaner solution
+   gint red_prec, red_shift, green_prec, green_shift, blue_prec, blue_shift;
+   gdk_visual_get_red_pixel_details (system_visual, NULL, &red_shift, &red_prec);
+   gdk_visual_get_green_pixel_details (system_visual, NULL, &green_shift, &green_prec);
+   gdk_visual_get_blue_pixel_details (system_visual, NULL, &blue_shift, &blue_prec);
+
+    color->pixel = ((color->red >> (16 - red_prec)) << red_shift) |
+        ((color->green >> (16 - green_prec)) << green_shift) |
+        ((color->blue >> (16 - blue_prec)) << blue_shift);
 }
 
 /**
