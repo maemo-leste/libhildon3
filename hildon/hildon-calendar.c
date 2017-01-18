@@ -72,7 +72,11 @@
  * </note>
  */
 
-#include "config.h"
+#undef HILDON_DISABLE_DEPRECATED
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
@@ -86,8 +90,8 @@
 
 #include <glib.h>
 
-#include                                        "hildon-calendar.h"
-#include                                        "hildon-marshalers.h"
+#include "hildon-calendar.h"
+#include "hildon-marshalers.h"
 
 // Define to remain compatible with GtkCalendar source:
 #define GTK_PARAM_READABLE G_PARAM_READABLE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB
