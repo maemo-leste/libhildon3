@@ -24,9 +24,6 @@
 
 #include <stdlib.h>
 #include <check.h>
-#include <gtk/gtkmain.h>
-#include <gtk/gtkvbox.h>
-#include <gtk/gtklabel.h>
 #include <glib/gprintf.h>
 #include "test_suites.h"
 #include "check_utils.h"
@@ -62,9 +59,10 @@ fx_setup_default_wizard_dialog ()
 
   for(i=0; i<DEFAULT_NOTEBOOK_PAGES; i++)
     {
-      box[i] = GTK_BOX(gtk_vbox_new(FALSE, 0));
+      box[i] = GTK_BOX(gtk_box_new (GTK_ORIENTATION_VERTICAL, 0));
       label = GTK_LABEL(gtk_label_new(g_strdup_printf("Label for page %d", i)));
-      gtk_box_pack_start_defaults(box[i], GTK_WIDGET(label));
+      gtk_box_pack_start (box[i], GTK_WIDGET(label),
+                          TRUE, TRUE, 0);
       gtk_notebook_append_page(book, GTK_WIDGET(box[i]), NULL); 
     } 
 
@@ -108,9 +106,10 @@ START_TEST (test_set_get_property_wizard_notebook_regular)
   book = GTK_NOTEBOOK(gtk_notebook_new());
   for(i=0; i<2; i++)
     {
-      box[i] = GTK_BOX(gtk_vbox_new(FALSE, 0));
+      box[i] = GTK_BOX(gtk_box_new (GTK_ORIENTATION_VERTICAL, 0));
       label = GTK_LABEL(gtk_label_new(g_strdup_printf("Label for page %d", i)));
-      gtk_box_pack_start_defaults(box[i], GTK_WIDGET(label));
+      gtk_box_pack_start (box[i], GTK_WIDGET(label),
+                          TRUE, TRUE, 0);
       gtk_notebook_append_page(book, GTK_WIDGET(box[i]), NULL); 
     }
 

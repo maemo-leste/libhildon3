@@ -24,9 +24,6 @@
 
 #include <stdlib.h>
 #include <check.h>
-#include <gtk/gtkmain.h>
-#include <gtk/gtkhbox.h>
-#include <gtk/gtkcontainer.h>
 #include "test_suites.h"
 #include "check_utils.h"
 
@@ -82,7 +79,7 @@ static void remove_and_destroy_time_editor(GtkWidget *window,HildonTimeEditor **
 {
   
   gtk_container_remove (GTK_CONTAINER (window), GTK_WIDGET(*time_editor));
-  gtk_widget_hide_all (window);
+  gtk_widget_hide (window);
 
 }
 

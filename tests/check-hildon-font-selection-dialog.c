@@ -24,7 +24,6 @@
 
 #include <stdlib.h>
 #include <check.h>
-#include <gtk/gtkmain.h>
 #include <glib/gprintf.h>
 #include <string.h>
 #include "test_suites.h"
