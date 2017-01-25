@@ -54,8 +54,8 @@ main                                            (int argc,
     HildonHVolumebar *bar = HILDON_HVOLUMEBAR (hildon_hvolumebar_new ());
     gtk_widget_set_size_request (GTK_WIDGET (bar), 400, -1);
 
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (bar), FALSE, FALSE, 0);
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (button), FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (bar), FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (button), FALSE, FALSE, 0);
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CLOSE);
 
     g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_mute_clicked), bar);

@@ -48,8 +48,8 @@ main (int argc, char **argv)
     GtkDialog *dialog = GTK_DIALOG (gtk_dialog_new ());
     HildonDateEditor *date_editor = HILDON_DATE_EDITOR (hildon_date_editor_new ());
 
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), gtk_label_new ("Choose a date"), FALSE, FALSE, 10);
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (date_editor), FALSE, FALSE, 10);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), gtk_label_new ("Choose a date"), FALSE, FALSE, 10);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (date_editor), FALSE, FALSE, 10);
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CANCEL);
 
     g_signal_connect (G_OBJECT (date_editor), "date_error", G_CALLBACK (on_error), NULL);

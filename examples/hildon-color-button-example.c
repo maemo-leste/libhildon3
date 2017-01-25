@@ -41,7 +41,7 @@ main                                            (int argc,
 
     gtk_box_pack_start (GTK_BOX (hbox), label, TRUE, TRUE, 0);
     gtk_box_pack_start (GTK_BOX (hbox), button, FALSE, FALSE, 0);
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), hbox, TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), hbox, TRUE, TRUE, 0);
 
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CLOSE);
 

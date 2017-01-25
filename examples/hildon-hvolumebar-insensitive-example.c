@@ -44,8 +44,8 @@ main                                            (int argc,
     hildon_volumebar_set_range_insensitive_message (HILDON_VOLUMEBAR (bar_1), "Can't set volume while muted");
     hildon_volumebar_set_range_insensitive_messagef (HILDON_VOLUMEBAR (bar_2), "Can't set volume while %s", "muted");
 
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (bar_1), FALSE, FALSE, 0);
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (bar_2), FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (bar_1), FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (bar_2), FALSE, FALSE, 0);
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CLOSE);
 
     gtk_widget_show_all (GTK_WIDGET (dialog));

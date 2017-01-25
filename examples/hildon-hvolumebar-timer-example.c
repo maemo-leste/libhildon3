@@ -52,7 +52,7 @@ on_idle                                         (void)
         hildon_helper_set_insensitive_message ((GtkWidget *) bar, "Insensitive");
         hildon_volumebar_set_range_insensitive_message (HILDON_VOLUMEBAR (bar), "Insensitive range");
 
-        gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (bar), FALSE, FALSE, 0);
+        gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (bar), FALSE, FALSE, 0);
         gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CLOSE);
 
         gtk_widget_show_all (GTK_WIDGET (dialog));

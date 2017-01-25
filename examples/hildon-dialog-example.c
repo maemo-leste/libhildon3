@@ -22,6 +22,7 @@
  *
  */
 
+#include <glib/gi18n.h>
 #include                                        <hildon/hildon.h>
 
 int
@@ -40,7 +41,7 @@ main                                            (int argc,
 
     gtk_window_set_title (GTK_WINDOW (d), "Hi!");
     hildon_dialog_add_button (HILDON_DIALOG (d), GTK_STOCK_OK, GTK_RESPONSE_NONE);
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(d)->vbox), label);
+    gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area (d)), label);
 
     gtk_widget_show_all (GTK_WIDGET (d));
 
@@ -59,7 +60,7 @@ main                                            (int argc,
 
     label2 = gtk_label_new ("Hello, again!");
 
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(d2)->vbox), label2);
+    gtk_container_add (GTK_CONTAINER (gtk_dialog_get_content_area (d2)), label2);
 
     gtk_widget_show_all (GTK_WIDGET (d2));
 

@@ -36,7 +36,7 @@ main (int argc, char **argv)
     GtkDialog *dialog = GTK_DIALOG (gtk_dialog_new ());
     HildonTimeEditor *time_editor = HILDON_TIME_EDITOR (hildon_time_editor_new ());
 
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (time_editor), FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (time_editor), FALSE, FALSE, 0);
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CANCEL);
 
     gtk_widget_show_all (GTK_WIDGET (dialog));

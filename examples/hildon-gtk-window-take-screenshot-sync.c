@@ -41,12 +41,13 @@ static gboolean cb(gpointer win)
 int main(int argc, char const *argv[])
 {
   GtkWidget *win, *text;
+  GdkWindow *window;
 
   Block = !argv[1];
   gtk_init(NULL, NULL);
 
   text = gtk_label_new("Moi!");
-  gtk_widget_modify_font(text, pango_font_description_from_string("300"));
+  gtk_widget_override_font(text, pango_font_description_from_string("300"));
 
   win = hildon_window_new();
   gtk_window_set_wmclass(GTK_WINDOW(win), "osso_calculator", "Osso_calculator");
@@ -55,8 +56,9 @@ int main(int argc, char const *argv[])
   gtk_container_add(GTK_CONTAINER(win), text);
 
   gtk_widget_realize(win);
-  gdk_window_set_events(win->window,
-            gdk_window_get_events(win->window) | GDK_BUTTON_PRESS_MASK);
+  window = GDK_WINDOW (gtk_widget_get_window (win));
+  gdk_window_set_events(window,
+            gdk_window_get_events(window) | GDK_BUTTON_PRESS_MASK);
   gtk_widget_show_all(win);
 
   gtk_main();

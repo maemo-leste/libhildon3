@@ -37,7 +37,7 @@ main                                            (int argc,
     GtkDialog *dialog = GTK_DIALOG (gtk_dialog_new ());
     GtkWidget *chooser = hildon_color_chooser_new ();
 
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), chooser, TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), chooser, TRUE, TRUE, 0);
 
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CLOSE);
 

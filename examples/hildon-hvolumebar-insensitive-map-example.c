@@ -40,7 +40,7 @@ main                                            (int argc,
     gtk_widget_set_size_request (GTK_WIDGET (bar), 400, -1);
 
     gtk_widget_set_sensitive (GTK_WIDGET (bar), FALSE);
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), GTK_WIDGET (bar), FALSE, FALSE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), GTK_WIDGET (bar), FALSE, FALSE, 0);
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CLOSE);
 
     gtk_widget_show_all (GTK_WIDGET (dialog));

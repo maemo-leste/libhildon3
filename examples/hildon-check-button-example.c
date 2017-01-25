@@ -46,7 +46,7 @@ main                                            (int    argc,
     hildon_gtk_init (&argc, &argv);
 
     win = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    vbox = GTK_BOX (gtk_vbox_new (FALSE, 10));
+    vbox = GTK_BOX (gtk_box_new (GTK_ORIENTATION_VERTICAL, 10));
     table = gtk_table_new (3, 2, TRUE);
     label = gtk_label_new ("none");
 

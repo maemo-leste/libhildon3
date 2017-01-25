@@ -38,7 +38,7 @@ main                                            (int argc,
 
     GtkWidget *picker = hildon_weekday_picker_new ();
 
-    gtk_box_pack_start (GTK_BOX (dialog->vbox), picker, TRUE, TRUE, 0);
+    gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)), picker, TRUE, TRUE, 0);
 
     gtk_dialog_add_button (dialog, "Close", GTK_RESPONSE_CLOSE);
 
