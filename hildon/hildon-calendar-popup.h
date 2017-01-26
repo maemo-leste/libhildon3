@@ -27,7 +27,7 @@
 #ifndef                                         __HILDON_CALENDAR_POPUP_H__
 #define                                         __HILDON_CALENDAR_POPUP_H__
 
-#include                                        <gtk/gtkdialog.h>
+#include                                        <gtk/gtk.h>
 
 G_BEGIN_DECLS
 
