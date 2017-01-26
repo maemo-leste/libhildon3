@@ -253,7 +253,11 @@ draw_grid                                       (GdkWindow *drawable,
     int currenty;
     for (currenty = y; currenty <= h; currenty++)
         for (currentx = ((currenty % 2 == 0) ? x : x + 1); currentx <= w; currentx += 2)
-            gdk_draw_point (drawable, cr, currentx, currenty);
+        {
+//            gdk_draw_point (drawable, cr, currentx, currenty);
+            cairo_move_to (cr, currentx, currenty);
+            cairo_paint (cr);
+        }
 }
 
 /* Handle exposure events for the color picker's drawing area */
