@@ -72,10 +72,6 @@ hildon_seekbar_get_property                     (GObject *object,
                                                  GParamSpec *pspec);
 
 static void
-hildon_seekbar_size_request                     (GtkWidget *widget,
-                                                 GtkRequisition *event);
-
-static void
 hildon_seekbar_get_preferred_width              (GtkWidget *widget,
                                                  gint      *minimal_width,
                                                  gint      *natural_width);
@@ -527,9 +523,10 @@ hildon_seekbar_set_position                     (HildonSeekbar *seekbar,
     }
 }
 
-static void 
-hildon_seekbar_size_request                     (GtkWidget *widget,
-                                                 GtkRequisition *req)
+static void
+hildon_seekbar_get_preferred_width (GtkWidget *widget,
+                                    gint      *minimal_width,
+                                    gint      *natural_width)
 {
     HildonSeekbar *self = NULL;
     HildonSeekbarPrivate *priv = NULL;
@@ -542,24 +539,12 @@ hildon_seekbar_size_request                     (GtkWidget *widget,
 
     priv->is_toolbar = parent ? TRUE : FALSE;
 
-    gtk_widget_get_preferred_size (widget, req, 0);
+    if (GTK_WIDGET_CLASS (parent_class)->get_preferred_width)
+        GTK_WIDGET_CLASS (parent_class)->get_preferred_width (widget, minimal_width, natural_width);
 
     /* Request minimum size, depending on whether the widget is in a
      * toolbar or not */
-    req->width = priv->is_toolbar ? TOOL_MINIMUM_WIDTH : MINIMUM_WIDTH;
-    req->height = priv->is_toolbar ? TOOL_DEFAULT_HEIGHT : DEFAULT_HEIGHT;
-}
-
-static void
-hildon_seekbar_get_preferred_width (GtkWidget *widget,
-                                    gint      *minimal_width,
-                                    gint      *natural_width)
-{
-  GtkRequisition requisition;
-
-  hildon_seekbar_size_request (widget, &requisition);
-
-  *minimal_width = *natural_width = requisition.width;
+    *minimal_width = *natural_width = priv->is_toolbar ? TOOL_MINIMUM_WIDTH : MINIMUM_WIDTH;
 }
 
 static void
@@ -567,11 +552,23 @@ hildon_seekbar_get_preferred_height (GtkWidget *widget,
                                      gint      *minimal_height,
                                      gint      *natural_height)
 {
-  GtkRequisition requisition;
+    HildonSeekbar *self = NULL;
+    HildonSeekbarPrivate *priv = NULL;
+    GtkWidget *parent = NULL;
 
-  hildon_seekbar_size_request (widget, &requisition);
+    self = HILDON_SEEKBAR (widget);
+    priv = HILDON_SEEKBAR_GET_PRIVATE (self);
 
-  *minimal_height = *natural_height = requisition.height;
+    parent = gtk_widget_get_ancestor (GTK_WIDGET (self), GTK_TYPE_TOOLBAR);
+
+    priv->is_toolbar = parent ? TRUE : FALSE;
+
+    if (GTK_WIDGET_CLASS (parent_class)->get_preferred_height)
+        GTK_WIDGET_CLASS (parent_class)->get_preferred_height (widget, minimal_height, natural_height);
+
+    /* Request minimum size, depending on whether the widget is in a
+     * toolbar or not */
+    *minimal_height = *natural_height = priv->is_toolbar ? TOOL_DEFAULT_HEIGHT : DEFAULT_HEIGHT;
 }
 
 static void 
