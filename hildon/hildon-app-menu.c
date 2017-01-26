@@ -482,8 +482,8 @@ hildon_app_menu_hide_all                        (GtkWidget *widget)
     priv->inhibit_repack = TRUE;
 
     /* Hide children, but not self. */
-    g_list_foreach (priv->buttons, (GFunc) gtk_widget_hide_all, NULL);
-    g_list_foreach (priv->filters, (GFunc) gtk_widget_hide_all, NULL);
+    g_list_foreach (priv->buttons, (GFunc) gtk_widget_hide, NULL);
+    g_list_foreach (priv->filters, (GFunc) gtk_widget_hide, NULL);
 
     priv->inhibit_repack = FALSE;
 
@@ -1034,7 +1034,6 @@ hildon_app_menu_class_init                      (HildonAppMenuClass *klass)
     gobject_class->dispose = hildon_app_menu_dispose;
     gobject_class->finalize = hildon_app_menu_finalize;
     widget_class->show_all = hildon_app_menu_show_all;
-    widget_class->hide_all = hildon_app_menu_hide_all;
     widget_class->map = hildon_app_menu_map;
     widget_class->realize = hildon_app_menu_realize;
     widget_class->unrealize = hildon_app_menu_unrealize;
