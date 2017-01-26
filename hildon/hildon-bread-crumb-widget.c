@@ -163,7 +163,7 @@ hildon_bread_crumb_widget_constructor (GType type,
   priv = bread_crumb->priv;
   priv->constructed = TRUE;
 
-  priv->hbox = gtk_hbox_new (FALSE, 6);
+  priv->hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 6);
   gtk_container_add (GTK_CONTAINER (bread_crumb), priv->hbox);
 
   /* Separator */
@@ -177,7 +177,7 @@ hildon_bread_crumb_widget_constructor (GType type,
   gtk_widget_set_no_show_all (priv->arrow, TRUE);
 
   /* Contents base container */
-  bread_crumb->contents = gtk_hbox_new (FALSE, HILDON_MARGIN_DEFAULT);
+  bread_crumb->contents = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, HILDON_MARGIN_DEFAULT);
   gtk_container_add (GTK_CONTAINER (priv->hbox), bread_crumb->contents);
   gtk_widget_show (bread_crumb->contents);
 
@@ -238,8 +238,8 @@ hildon_bread_crumb_widget_set_contents (HildonBreadCrumbWidget *bread_crumb)
   if (priv->icon)
     {
       icon = g_object_ref (priv->icon);
-      if (icon->parent)
-        gtk_container_remove (GTK_CONTAINER (icon->parent), icon);
+      if (gtk_widget_get_parent (icon))
+        gtk_container_remove (GTK_CONTAINER (gtk_widget_get_parent (icon)), icon);
       priv->icon = NULL;
     }
 
@@ -253,9 +253,9 @@ hildon_bread_crumb_widget_set_contents (HildonBreadCrumbWidget *bread_crumb)
       priv->icon = icon;
       if (priv->icon_position == GTK_POS_LEFT ||
           priv->icon_position == GTK_POS_RIGHT)
-          bread_crumb->contents = gtk_hbox_new (FALSE, HILDON_MARGIN_DEFAULT);
+          bread_crumb->contents = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, HILDON_MARGIN_DEFAULT);
       else
-          bread_crumb->contents = gtk_vbox_new (FALSE, HILDON_MARGIN_DEFAULT);
+          bread_crumb->contents = gtk_box_new (GTK_ORIENTATION_VERTICAL, HILDON_MARGIN_DEFAULT);
 
       if (priv->icon_position == GTK_POS_LEFT ||
           priv->icon_position == GTK_POS_TOP)
@@ -291,7 +291,7 @@ hildon_bread_crumb_widget_set_contents (HildonBreadCrumbWidget *bread_crumb)
   else
     {
       /* Only text */
-      bread_crumb->contents = gtk_hbox_new (FALSE, 0);
+      bread_crumb->contents = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
       gtk_box_pack_start (GTK_BOX (priv->hbox), bread_crumb->contents,
                           TRUE, TRUE, 0);
 
@@ -431,7 +431,7 @@ hildon_bread_crumb_widget_get_natural_size (HildonBreadCrumb *bread_crumb,
   item = HILDON_BREAD_CRUMB_WIDGET (bread_crumb);
   priv = item->priv;
 
-  gtk_widget_size_request (GTK_WIDGET (item), &widget_req);
+  gtk_widget_get_preferred_size (GTK_WIDGET (item), &widget_req, NULL);
 
   layout = gtk_widget_create_pango_layout (priv->label, priv->text);
   pango_layout_get_pixel_size (layout, &width, &height);
@@ -446,13 +446,13 @@ hildon_bread_crumb_widget_get_natural_size (HildonBreadCrumb *bread_crumb,
 
       /* Add the "natural" width for the label */
       *natural_width += width;
-      *natural_width += GTK_CONTAINER (item)->border_width * 2;
+      *natural_width += gtk_container_get_border_width (GTK_CONTAINER (item)) * 2;
     }
 
   if (natural_height)
     {
       *natural_height = widget_req.height;
-      *natural_height += GTK_CONTAINER (item)->border_width * 2;
+      *natural_height += gtk_container_get_border_width (GTK_CONTAINER (item)) * 2;
     }
 }
 
