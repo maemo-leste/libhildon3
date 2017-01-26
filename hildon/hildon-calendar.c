@@ -3685,7 +3685,7 @@ hildon_calendar_drag_data_received (GtkWidget        *widget,
 GtkWidget*
 hildon_calendar_new (void)
 {
-  return g_object_new (GTK_TYPE_CALENDAR, NULL);
+  return g_object_new (HILDON_TYPE_CALENDAR, NULL);
 }
 
 /**
@@ -3701,7 +3701,7 @@ hildon_calendar_new (void)
 HildonCalendarDisplayOptions
 hildon_calendar_get_display_options (HildonCalendar         *calendar)
 {
-  g_return_val_if_fail (GTK_IS_CALENDAR (calendar), 0);
+  g_return_val_if_fail (HILDON_IS_CALENDAR (calendar), 0);
 
   return calendar->priv->display_flags;
 }
@@ -3725,7 +3725,7 @@ hildon_calendar_set_display_options (HildonCalendar          *calendar,
   gint resize = 0;
   HildonCalendarDisplayOptions old_flags;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   old_flags = priv->display_flags;
 
@@ -3818,7 +3818,7 @@ hildon_calendar_select_month (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
   g_return_if_fail (month <= 11);
 
   priv = calendar->priv;
@@ -3837,7 +3837,7 @@ hildon_calendar_select_month (HildonCalendar *calendar,
     }
   if (priv->year != year)
     {
-      priv->year  = year;
+      priv->year = year;
       g_object_notify (G_OBJECT (calendar), "year");
     }
 
@@ -3863,7 +3863,7 @@ hildon_calendar_select_day (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
   g_return_if_fail (day <= 31);
 
   priv = calendar->priv;
@@ -3905,7 +3905,7 @@ hildon_calendar_clear_marks (HildonCalendar *calendar)
   HildonCalendarPrivate *priv;
   guint day;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   priv = calendar->priv;
 
@@ -3931,7 +3931,7 @@ hildon_calendar_mark_day (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   priv = calendar->priv;
 
@@ -3960,7 +3960,7 @@ hildon_calendar_get_day_is_marked (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_val_if_fail (GTK_IS_CALENDAR (calendar), FALSE);
+  g_return_val_if_fail (HILDON_IS_CALENDAR (calendar), FALSE);
 
   priv = calendar->priv;
 
@@ -3983,7 +3983,7 @@ hildon_calendar_unmark_day (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   priv = calendar->priv;
 
@@ -4015,7 +4015,7 @@ hildon_calendar_get_date (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   priv = calendar->priv;
 
@@ -4057,7 +4057,7 @@ hildon_calendar_set_detail_func (HildonCalendar           *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   priv = calendar->priv;
 
@@ -4089,7 +4089,7 @@ hildon_calendar_set_detail_width_chars (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   priv = calendar->priv;
 
@@ -4117,7 +4117,7 @@ hildon_calendar_set_detail_height_rows (HildonCalendar *calendar,
 {
   HildonCalendarPrivate *priv;
 
-  g_return_if_fail (GTK_IS_CALENDAR (calendar));
+  g_return_if_fail (HILDON_IS_CALENDAR (calendar));
 
   priv = calendar->priv;
 
@@ -4143,7 +4143,7 @@ hildon_calendar_set_detail_height_rows (HildonCalendar *calendar,
 gint
 hildon_calendar_get_detail_width_chars (HildonCalendar *calendar)
 {
-  g_return_val_if_fail (GTK_IS_CALENDAR (calendar), 0);
+  g_return_val_if_fail (HILDON_IS_CALENDAR (calendar), 0);
 
   return calendar->priv->detail_width_chars;
 }
@@ -4162,7 +4162,7 @@ hildon_calendar_get_detail_width_chars (HildonCalendar *calendar)
 gint
 hildon_calendar_get_detail_height_rows (HildonCalendar *calendar)
 {
-  g_return_val_if_fail (GTK_IS_CALENDAR (calendar), 0);
+  g_return_val_if_fail (HILDON_IS_CALENDAR (calendar), 0);
 
   return calendar->priv->detail_height_rows;
 }
