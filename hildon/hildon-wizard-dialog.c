@@ -262,7 +262,6 @@ hildon_wizard_dialog_init                       (HildonWizardDialog *wizard_dial
     GtkDialog *dialog = GTK_DIALOG (wizard_dialog);
 
     /* Init internal widgets */
-    gtk_dialog_set_has_separator (dialog, FALSE);
 
     /* Default values for user provided properties */
     priv->notebook = NULL;
