@@ -70,6 +70,7 @@
  */
 
 #include                                        "hildon-check-button.h"
+#include					"hildon-enum-types.h"
 
 enum {
   TOGGLED,
@@ -324,7 +325,11 @@ hildon_check_button_init                        (HildonCheckButton *button)
     /* Add cell view to the image */
     gtk_button_set_image (GTK_BUTTON (button), cell_view);
 
+#if GTK_CHECK_VERSION (3,20,0)
+    gtk_widget_set_focus_on_click (GTK_WIDGET (button), FALSE);
+#else
     gtk_button_set_focus_on_click (GTK_BUTTON (button), FALSE);
+#endif
     g_object_set (G_OBJECT (button), "xalign", 0.0, NULL);
 
     hildon_check_button_apply_style (GTK_WIDGET (button));
