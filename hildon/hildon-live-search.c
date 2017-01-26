@@ -105,10 +105,11 @@ hash_func                                       (gconstpointer key)
     gchar *path_str;
     guint val;
 
-    path = (GtkTreePath *) key;
+    path = gtk_tree_row_reference_get_path ((GtkTreeRowReference *) key);
     path_str = gtk_tree_path_to_string (path);
     val = g_str_hash (path_str);
     g_free (path_str);
+    gtk_tree_path_free (path);
 
     return val;
 }
@@ -117,28 +118,18 @@ static gboolean
 key_equal_func                                  (gconstpointer v1,
                                                  gconstpointer v2)
 {
-    return gtk_tree_path_compare ((GtkTreePath *)v1,
-                                  (GtkTreePath *)v2) == 0;
-}
+    gboolean ret;
+    GtkTreePath *path1;
+    GtkTreePath *path2;
 
-static gboolean
-model_get_root (GtkTreeModelFilter *filter,
-                GtkTreeModel *base_model,
-                GtkTreeIter *iter_child)
-{
-    GtkTreeIter virtual_root;
-    GtkTreePath *virtual_root_path;
-    gboolean walking;
+    path1 = gtk_tree_row_reference_get_path ((GtkTreeRowReference *) v1);
+    path2 = gtk_tree_row_reference_get_path ((GtkTreeRowReference *) v2);
+    ret = gtk_tree_path_compare (path1, path2) == 0;
 
-    g_object_get (filter, "virtual-root", &virtual_root_path, NULL);
-    if (virtual_root_path) {
-        gtk_tree_model_get_iter (base_model, &virtual_root, virtual_root_path);
-    }
-    walking = gtk_tree_model_iter_children (base_model, iter_child,
-                                            virtual_root_path ?
-                                            &virtual_root : NULL);
+    gtk_tree_path_free (path1);
+    gtk_tree_path_free (path2);
 
-    return walking;
+    return ret;
 }
 
 /**
@@ -151,30 +142,15 @@ model_get_root (GtkTreeModelFilter *filter,
 static void
 selection_map_create                            (HildonLiveSearchPrivate *priv)
 {
-    gboolean walking;
-    GtkTreeModel *base_model;
-    GtkTreeIter iter_child;
-    GtkTreePath *path;
-
     if (!GTK_IS_TREE_VIEW (priv->kb_focus_widget))
         return;
 
     g_assert (priv->selection_map == NULL);
 
-    base_model = gtk_tree_model_filter_get_model (priv->filter);
-
     priv->selection_map = g_hash_table_new_full
-        (hash_func, key_equal_func, (GDestroyNotify) gtk_tree_path_free, NULL);
+        (hash_func, key_equal_func,
+         (GDestroyNotify) gtk_tree_row_reference_free, NULL);
 
-    walking = model_get_root (priv->filter, base_model, &iter_child);
-
-    while (walking) {
-        path = gtk_tree_model_get_path (base_model, &iter_child);
-        g_hash_table_insert (priv->selection_map,
-                             path, GINT_TO_POINTER (FALSE));
-
-        walking = gtk_tree_model_iter_next (base_model, &iter_child);
-    }
 }
 
 /**
@@ -204,12 +180,70 @@ convert_child_path_to_path (GtkTreeModel *model,
   if (model == base_model)
     return gtk_tree_path_copy (path);
 
-  g_assert (gtk_tree_model_sort_get_model (model) == base_model);
   g_assert (GTK_IS_TREE_MODEL_SORT (model));
+  g_assert (gtk_tree_model_sort_get_model (GTK_TREE_MODEL_SORT(model)) == base_model);
 
   return gtk_tree_model_sort_convert_child_path_to_path
       (GTK_TREE_MODEL_SORT (model), path);
 }
+
+static GtkTreePath *
+convert_path_to_child_path (GtkTreeModel *model,
+                            GtkTreeModel *base_model,
+                            GtkTreePath *path)
+{
+  g_return_val_if_fail (model != NULL, NULL);
+  g_return_val_if_fail (base_model != NULL, NULL);
+  g_return_val_if_fail (path != NULL, NULL);
+
+  if (model == base_model)
+    return gtk_tree_path_copy (path);
+
+  g_assert (GTK_IS_TREE_MODEL_SORT (model));
+  g_assert (gtk_tree_model_sort_get_model (GTK_TREE_MODEL_SORT (model)) == base_model);
+
+  return gtk_tree_model_sort_convert_path_to_child_path
+      (GTK_TREE_MODEL_SORT (model), path);
+}
+
+static gboolean
+row_reference_is_not_selected (GtkTreeRowReference *row_ref,
+                               gpointer value,
+                               HildonLiveSearchPrivate *priv)
+{
+  GtkTreeSelection *selection = gtk_tree_view_get_selection (
+      GTK_TREE_VIEW (priv->kb_focus_widget));
+  GtkTreePath *base_path = gtk_tree_row_reference_get_path (row_ref);
+  GtkTreePath *filter_path;
+
+  if (base_path == NULL) {
+      return TRUE;
+  }
+
+  filter_path = gtk_tree_model_filter_convert_child_path_to_path
+      (priv->filter, base_path);
+  GtkTreePath *view_path;
+  gboolean ret;
+
+  if (filter_path == NULL)
+    {
+      gtk_tree_path_free (base_path);
+      return FALSE;
+    }
+
+  view_path = convert_child_path_to_path (
+      gtk_tree_view_get_model (GTK_TREE_VIEW (priv->kb_focus_widget)),
+              GTK_TREE_MODEL (priv->filter), filter_path);
+
+  ret = ! gtk_tree_selection_path_is_selected (selection, view_path);
+
+  gtk_tree_path_free (base_path);
+  gtk_tree_path_free (filter_path);
+  gtk_tree_path_free (view_path);
+
+  return ret;
+}
+
 
 /**
  * selection_map_update_map_from_selection:
@@ -221,10 +255,9 @@ convert_child_path_to_path (GtkTreeModel *model,
 static void
 selection_map_update_map_from_selection         (HildonLiveSearchPrivate *priv)
 {
-    gboolean walking;
     GtkTreeModel *base_model;
     GtkTreeSelection *selection;
-    GtkTreeIter iter_child;
+    GList *selected_list, *l_iter;
 
     if (!GTK_IS_TREE_VIEW (priv->kb_focus_widget))
         return;
@@ -232,38 +265,44 @@ selection_map_update_map_from_selection         (HildonLiveSearchPrivate *priv)
     base_model = gtk_tree_model_filter_get_model (priv->filter);
     selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (priv->kb_focus_widget));
 
-    walking = model_get_root (priv->filter, base_model, &iter_child);
+    /* Remove all items from priv->selection_map which are not selected */
+    g_hash_table_foreach_remove (priv->selection_map,
+                                 (GHRFunc) row_reference_is_not_selected, priv);
 
-    while (walking) {
+    /* fill priv->selection_map from gtk_tree_selection_get_selected_rows()*/
+    selected_list = l_iter = gtk_tree_selection_get_selected_rows (selection,
+                                                                 NULL);
+    while (l_iter) {
+        GtkTreePath *view_path = l_iter->data;
         GtkTreePath *base_path, *filter_path;
-        base_path = gtk_tree_model_get_path (base_model, &iter_child);
-        filter_path = gtk_tree_model_filter_convert_child_path_to_path
-          (priv->filter, base_path);
+        GtkTreeRowReference *row_ref;
 
-        if (filter_path) {
-            GtkTreePath *view_path;
-            view_path = convert_child_path_to_path (
-                gtk_tree_view_get_model (GTK_TREE_VIEW (priv->kb_focus_widget)),
-                GTK_TREE_MODEL (priv->filter), filter_path);
-            if (gtk_tree_selection_path_is_selected
-                (selection, view_path)) {
-                g_hash_table_replace
-                    (priv->selection_map,
-                     base_path,
-                     GINT_TO_POINTER (TRUE));
-            } else {
-                g_hash_table_replace
-                    (priv->selection_map,
-                     base_path,
-                     GINT_TO_POINTER (FALSE));
-            }
-            gtk_tree_path_free (view_path);
-            gtk_tree_path_free (filter_path);
-        } else {
-            gtk_tree_path_free (base_path);
-        }
-        walking = gtk_tree_model_iter_next (base_model, &iter_child);
+        filter_path = convert_path_to_child_path (
+            gtk_tree_view_get_model (GTK_TREE_VIEW (priv->kb_focus_widget)),
+            GTK_TREE_MODEL (priv->filter), view_path);
+        base_path = gtk_tree_model_filter_convert_path_to_child_path
+          (priv->filter, filter_path);
+
+        row_ref = gtk_tree_row_reference_new (base_model, base_path);
+        g_hash_table_replace (priv->selection_map,
+                              row_ref, NULL);
+        gtk_tree_path_free (view_path);
+        gtk_tree_path_free (filter_path);
+        gtk_tree_path_free (base_path);
+        selected_list->data = NULL;
+        l_iter = g_list_next (l_iter);
     }
+    g_list_free (selected_list);
+}
+
+static gboolean
+reference_row_has_path (GtkTreeRowReference *row_ref, gpointer value, GtkTreePath *path)
+{
+    gboolean ret;
+    GtkTreePath *path2 = gtk_tree_row_reference_get_path (row_ref);
+    ret = gtk_tree_path_compare (path, path2) == 0;
+    gtk_tree_path_free (path2);
+    return ret;
 }
 
 /**
@@ -276,48 +315,60 @@ selection_map_update_map_from_selection         (HildonLiveSearchPrivate *priv)
 static void
 selection_map_update_selection_from_map         (HildonLiveSearchPrivate *priv)
 {
-    gboolean walking;
-    GtkTreeModel *base_model;
     GtkTreeSelection *selection;
-    GtkTreeIter iter_child;
+    GList *selected_list, *l_iter;
 
     if (!GTK_IS_TREE_VIEW (priv->kb_focus_widget))
         return;
 
-    base_model = gtk_tree_model_filter_get_model (priv->filter);
     selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (priv->kb_focus_widget));
 
-    walking = model_get_root (priv->filter, base_model, &iter_child);
-
-    while (walking) {
+    /* unselect things which are not in priv->selection_map */
+    selected_list = l_iter = gtk_tree_selection_get_selected_rows (selection,
+                                                                 NULL);
+    while (l_iter) {
+        GtkTreePath *view_path = l_iter->data;
         GtkTreePath *base_path, *filter_path;
-        base_path = gtk_tree_model_get_path (base_model, &iter_child);
-        filter_path = gtk_tree_model_filter_convert_child_path_to_path
-          (priv->filter, base_path);
+        filter_path = convert_path_to_child_path (
+            gtk_tree_view_get_model (GTK_TREE_VIEW (priv->kb_focus_widget)),
+            GTK_TREE_MODEL (priv->filter), view_path);
+        base_path = gtk_tree_model_filter_convert_path_to_child_path
+            (priv->filter, filter_path);
 
-        if (filter_path) {
-            gboolean selected;
-            GtkTreePath *view_path;
-            view_path = convert_child_path_to_path (
-                gtk_tree_view_get_model (GTK_TREE_VIEW (priv->kb_focus_widget)),
-                GTK_TREE_MODEL (priv->filter), filter_path);
+        if (g_hash_table_find (priv->selection_map,
+                               (GHRFunc) reference_row_has_path, base_path) == NULL)
+            gtk_tree_selection_unselect_path
+                (selection, view_path);
 
-            selected = GPOINTER_TO_INT
-                (g_hash_table_lookup
-                 (priv->selection_map, base_path));
-
-            if (selected) {
-                gtk_tree_selection_select_path
-                    (selection, view_path);
-            } else {
-                gtk_tree_selection_unselect_path
-                    (selection, view_path);
-            }
-            gtk_tree_path_free (view_path);
-            gtk_tree_path_free (filter_path);
-        }
+        gtk_tree_path_free (view_path);
+        gtk_tree_path_free (filter_path);
         gtk_tree_path_free (base_path);
-        walking = gtk_tree_model_iter_next (base_model, &iter_child);
+        l_iter->data = NULL;
+
+        l_iter = g_list_next (l_iter);
+    }
+    g_list_free (selected_list);
+
+    /* going though priv->selection_map to select items */
+    GHashTableIter iter;
+    gpointer key, value;
+
+    g_hash_table_iter_init (&iter, priv->selection_map);
+    while (g_hash_table_iter_next (&iter, &key, &value)) {
+        GtkTreeRowReference *row_ref = key;
+        GtkTreePath *base_path = gtk_tree_row_reference_get_path (row_ref);
+        GtkTreePath *filter_path = gtk_tree_model_filter_convert_child_path_to_path
+          (priv->filter, base_path);
+        GtkTreePath *view_path;
+
+        if (filter_path == NULL)
+            continue;
+
+        view_path = convert_child_path_to_path (
+            gtk_tree_view_get_model (GTK_TREE_VIEW (priv->kb_focus_widget)),
+            GTK_TREE_MODEL (priv->filter), filter_path);
+
+        gtk_tree_selection_select_path (selection, view_path);
     }
 }
 
@@ -501,29 +552,29 @@ on_key_press_event                              (GtkWidget        *widget,
     g_return_val_if_fail (HILDON_IS_LIVE_SEARCH (live_search), FALSE);
     priv = live_search->priv;
 
-    if (GTK_WIDGET_VISIBLE (priv->kb_focus_widget)) {
+    if (gtk_widget_get_visible (priv->kb_focus_widget)) {
         /* If the live search is hidden, Ctrl+whatever is always
          * passed to the focus widget, with the exception of
          * Ctrl + Space, which is given to the entry, so that the input method
          * is allowed to switch the keyboard layout. */
-        if (GTK_WIDGET_VISIBLE (live_search) ||
+        if (gtk_widget_get_visible (GTK_WIDGET (live_search)) ||
             !(event->state & GDK_CONTROL_MASK ||
-              event->keyval == GDK_Control_L ||
-              event->keyval == GDK_Control_R) ||
+              event->keyval == GDK_KEY_Control_L ||
+              event->keyval == GDK_KEY_Control_R) ||
             (event->state & GDK_CONTROL_MASK &&
-             event->keyval == GDK_space)) {
+             event->keyval == GDK_KEY_space)) {
             GdkEvent *new_event;
 
             /* If the entry is realized and has focus, it is enough to catch events.
              * This assumes that the toolbar is a child of the hook widget. */
             gtk_widget_realize (priv->entry);
-            if (!GTK_WIDGET_HAS_FOCUS (priv->entry))
+            if (!gtk_widget_has_focus (priv->entry))
                 gtk_widget_grab_focus (priv->entry);
 
             new_event = gdk_event_copy ((GdkEvent *)event);
             handled = gtk_widget_event (priv->entry, new_event);
             gdk_event_free (new_event);
-        } else if (!GTK_WIDGET_HAS_FOCUS (priv->kb_focus_widget)) {
+        } else if (!gtk_widget_has_focus (priv->kb_focus_widget)) {
             gtk_widget_grab_focus (GTK_WIDGET (priv->kb_focus_widget));
         }
     }
@@ -715,11 +766,11 @@ close_button_clicked_cb                         (GtkWidget *button,
     gtk_widget_hide (GTK_WIDGET (user_data));
 }
 
-static HildonGtkInputMode
-filter_input_mode                               (HildonGtkInputMode imode)
+static GtkInputHints
+filter_input_hints                              (GtkInputHints ihints)
 {
-    return imode & ~(HILDON_GTK_INPUT_MODE_AUTOCAP |
-                     HILDON_GTK_INPUT_MODE_DICTIONARY);
+    return ihints & ~(GTK_INPUT_HINT_UPPERCASE_SENTENCES |
+                      GTK_INPUT_HINT_WORD_COMPLETION);
 }
 
 static void
@@ -732,7 +783,7 @@ hildon_live_search_init                         (HildonLiveSearch *self)
     GtkToolItem *close_button;
     GtkToolItem *entry_container;
     GtkWidget *entry_hbox;
-    HildonGtkInputMode imode;
+    GtkInputHints ihints;
 
     self->priv = priv = GET_PRIVATE (self);
 
@@ -756,16 +807,17 @@ hildon_live_search_init                         (HildonLiveSearch *self)
     entry_container = gtk_tool_item_new ();
     gtk_tool_item_set_expand (entry_container, TRUE);
 
-    entry_hbox = gtk_hbox_new (FALSE, 0);
+    entry_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_box_set_homogeneous(GTK_BOX(entry_hbox), FALSE);
     gtk_container_add (GTK_CONTAINER (entry_container), entry_hbox);
 
     priv->entry = hildon_entry_new (HILDON_SIZE_FINGER_HEIGHT);
 
     /* Unset the autocap and dictionary input flags from the
        HildonEntry. */
-    imode = hildon_gtk_entry_get_input_mode (GTK_ENTRY (priv->entry));
-    hildon_gtk_entry_set_input_mode (GTK_ENTRY (priv->entry),
-                                     filter_input_mode (imode));
+    ihints = gtk_entry_get_input_hints (GTK_ENTRY (priv->entry));
+    gtk_entry_set_input_hints (GTK_ENTRY (priv->entry),
+                                     filter_input_hints (ihints));
 
     gtk_widget_set_name (GTK_WIDGET (priv->entry),
                          "HildonLiveSearchEntry");
@@ -776,22 +828,21 @@ hildon_live_search_init                         (HildonLiveSearch *self)
     gtk_toolbar_insert (GTK_TOOLBAR (self), entry_container, 0);
     gtk_widget_show_all (GTK_WIDGET (entry_container));
 
-    close = gtk_image_new_from_icon_name ("general_close",
+    close = gtk_image_new_from_icon_name ("window-close",
                                           HILDON_ICON_SIZE_FINGER);
-    gtk_misc_set_padding (GTK_MISC (close), 0, 0);
+    gtk_widget_set_halign (close, GTK_ALIGN_START);
+    gtk_widget_set_valign (close, GTK_ALIGN_START);
     close_button = gtk_tool_button_new (close, NULL);
-    GTK_WIDGET_UNSET_FLAGS (close_button, GTK_CAN_FOCUS);
+    gtk_widget_set_can_focus (GTK_WIDGET (close_button), FALSE);
 
-    close_button_alignment = gtk_alignment_new (0.0f, 0.0f, 1.0f, 1.0f);
-    gtk_alignment_set_padding (GTK_ALIGNMENT (close_button_alignment),
-                               0, 0,
-                               0, HILDON_MARGIN_DEFAULT);
-    gtk_container_add (GTK_CONTAINER (close_button_alignment),
-                       GTK_WIDGET (close_button));
+    gtk_widget_set_margin_top(GTK_WIDGET (close_button), 0);
+    gtk_widget_set_margin_bottom(GTK_WIDGET (close_button), 0);
+    gtk_widget_set_margin_start(GTK_WIDGET (close_button), 0);
+    gtk_widget_set_margin_end(GTK_WIDGET (close_button), HILDON_MARGIN_DEFAULT);
 
     close_button_container = gtk_tool_item_new ();
     gtk_container_add (GTK_CONTAINER (close_button_container),
-                       close_button_alignment);
+                       GTK_WIDGET (close_button));
 
     gtk_toolbar_insert (GTK_TOOLBAR (self), close_button_container, -1);
     gtk_widget_show_all (GTK_WIDGET (close_button_container));
@@ -967,7 +1018,7 @@ hildon_live_search_set_text_column              (HildonLiveSearch *livesearch,
 }
 
 static void
-on_widget_destroy                               (GtkObject *object,
+on_widget_destroy                               (GtkWidget *object,
                                                  gpointer   user_data)
 {
     hildon_live_search_widget_unhook (HILDON_LIVE_SEARCH (user_data));
