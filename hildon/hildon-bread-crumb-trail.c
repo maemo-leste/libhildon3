@@ -72,6 +72,15 @@ enum {
   PROP_0
 };
 
+static void
+hildon_bread_crumb_trail_get_preferred_width    (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width);
+
+static void
+hildon_bread_crumb_trail_get_preferred_height   (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height);
 static void hildon_bread_crumb_trail_size_request (GtkWidget *widget,
                                                    GtkRequisition *requisition);
 static void hildon_bread_crumb_trail_size_allocate (GtkWidget *widget,
@@ -102,7 +111,6 @@ static void
 hildon_bread_crumb_trail_class_init (HildonBreadCrumbTrailClass *klass)
 {
   GObjectClass *gobject_class = (GObjectClass*)klass;
-  GtkObjectClass *object_class = (GtkObjectClass*)klass;
   GtkWidgetClass *widget_class = (GtkWidgetClass*)klass;
   GtkContainerClass *container_class = (GtkContainerClass*)klass;
   GtkBindingSet *binding_set;
@@ -111,7 +119,8 @@ hildon_bread_crumb_trail_class_init (HildonBreadCrumbTrailClass *klass)
   gobject_class->finalize = hildon_bread_crumb_trail_finalize;
 
   /* GtkWidget signals */
-  widget_class->size_request = hildon_bread_crumb_trail_size_request;
+  widget_class->get_preferred_width = hildon_bread_crumb_trail_get_preferred_width;
+  widget_class->get_preferred_height = hildon_bread_crumb_trail_get_preferred_height;
   widget_class->size_allocate = hildon_bread_crumb_trail_size_allocate;
 
   /* GtkContainer signals */
@@ -149,7 +158,7 @@ hildon_bread_crumb_trail_class_init (HildonBreadCrumbTrailClass *klass)
   /* Signals */
   bread_crumb_trail_signals[CRUMB_CLICKED] =
     g_signal_new ("crumb-clicked",
-                  G_OBJECT_CLASS_TYPE (object_class),
+                  G_OBJECT_CLASS_TYPE (widget_class),
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (HildonBreadCrumbTrailClass, crumb_clicked),
                   g_signal_accumulator_true_handled, NULL,
@@ -159,7 +168,7 @@ hildon_bread_crumb_trail_class_init (HildonBreadCrumbTrailClass *klass)
 
   bread_crumb_trail_signals[MOVE_PARENT] =
     g_signal_new ("move-parent",
-                  G_OBJECT_CLASS_TYPE (object_class),
+                  G_OBJECT_CLASS_TYPE (widget_class),
                   G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION,
                   G_STRUCT_OFFSET (HildonBreadCrumbTrailClass, move_parent),
                   NULL, NULL,
@@ -171,9 +180,9 @@ hildon_bread_crumb_trail_class_init (HildonBreadCrumbTrailClass *klass)
   /* Binding set */
   binding_set = gtk_binding_set_by_class (widget_class);
 
-  gtk_binding_entry_add_signal (binding_set, GDK_Escape, 0,
+  gtk_binding_entry_add_signal (binding_set, GDK_KEY_Escape, 0,
                                 "move-parent", 0);
-  gtk_binding_entry_add_signal (binding_set, GDK_BackSpace, 0,
+  gtk_binding_entry_add_signal (binding_set, GDK_KEY_BackSpace, 0,
                                 "move-parent", 0);
                                 
   /* Private data */
@@ -201,6 +210,30 @@ hildon_bread_crumb_trail_move_parent (HildonBreadCrumbTrail *bct)
 }
 
 static void
+hildon_bread_crumb_trail_get_preferred_width (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+  GtkRequisition requisition;
+
+  hildon_bread_crumb_trail_size_request (widget, &requisition);
+
+  *minimal_width = *natural_width = requisition.width;
+}
+
+static void
+hildon_bread_crumb_trail_get_preferred_height(GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+  GtkRequisition requisition;
+
+  hildon_bread_crumb_trail_size_request (widget, &requisition);
+
+  *minimal_height = *natural_height = requisition.height;
+}
+
+static void
 hildon_bread_crumb_trail_size_request (GtkWidget *widget,
                                        GtkRequisition *requisition)
 {
@@ -218,7 +251,7 @@ hildon_bread_crumb_trail_size_request (GtkWidget *widget,
   requisition->height = 0;
   requisition->width = 0;
 
-  gtk_widget_size_request (priv->back_button, &child_requisition);
+  gtk_widget_get_preferred_size (priv->back_button, &child_requisition, NULL);
   requisition->width = child_requisition.width;
   requisition->height = child_requisition.height;
 
@@ -243,15 +276,13 @@ hildon_bread_crumb_trail_size_request (GtkWidget *widget,
     {
       GtkWidget *child = GTK_WIDGET (p->data);
 
-      if (GTK_WIDGET_VISIBLE (child))
-        gtk_widget_size_request (child, &child_requisition);
+      if (gtk_widget_get_visible (child))
+        gtk_widget_get_preferred_size (child, &child_requisition, NULL);
     }
 
   /* Border width */
-  requisition->width += GTK_CONTAINER (widget)->border_width * 2;
-  requisition->height += GTK_CONTAINER (widget)->border_width * 2;
-
-  widget->requisition = *requisition;
+  requisition->width += gtk_container_get_border_width (GTK_CONTAINER (widget)) * 2;
+  requisition->height += gtk_container_get_border_width (GTK_CONTAINER (widget)) * 2;
 }
 
 /* Document me please */
@@ -277,9 +308,9 @@ hildon_bread_crumb_trail_size_allocate (GtkWidget *widget,
   /* Get the rtl status */
   rtl = (gtk_widget_get_direction (widget) == GTK_TEXT_DIR_RTL);
 
-  widget->allocation = *allocation;
+  gtk_widget_set_allocation (widget, allocation);
 
-  border_width = (gint) GTK_CONTAINER (widget)->border_width;
+  border_width = (gint) gtk_container_get_border_width (GTK_CONTAINER (widget));
   allocation_width = allocation->width - 2 * border_width;
 
   /* Allocate the back button */
@@ -289,7 +320,7 @@ hildon_bread_crumb_trail_size_allocate (GtkWidget *widget,
     child_allocation.x = allocation->x + border_width;
 
   child_allocation.y = allocation->y + border_width;
-  gtk_widget_get_child_requisition (priv->back_button, &child_requisition);
+  gtk_widget_get_preferred_size (priv->back_button, &child_requisition, NULL);
   /* We want the back button to be a square */
   back_button_size = MAX (child_requisition.width, child_requisition.height);
   child_allocation.width = child_allocation.height = back_button_size;
@@ -338,7 +369,7 @@ hildon_bread_crumb_trail_size_allocate (GtkWidget *widget,
              and stop */
           child_allocation.width = allocation_width - width;
 
-          gtk_widget_size_request (child, &req);
+          gtk_widget_get_preferred_size (child, &req, NULL);
 
           if (child_allocation.width > req.width)
             {
@@ -433,7 +464,7 @@ crumb_activated_cb (GtkWidget *button,
       /* We remove the tip of the list until we hit the clicked button */
       while (child && child != button)
         {
-          if (GTK_WIDGET_HAS_FOCUS (child))
+          if (gtk_widget_has_focus (child))
             focus_last_item = TRUE;
 
           gtk_container_remove (GTK_CONTAINER (bct), child);
@@ -503,7 +534,7 @@ hildon_bread_crumb_trail_remove (GtkContainer *container,
 {
   GList *p, *next;
   HildonBreadCrumbTrailPrivate *priv;
-  gboolean was_visible = GTK_WIDGET_VISIBLE (widget);
+  gboolean was_visible = gtk_widget_get_visible (widget);
 
   priv = HILDON_BREAD_CRUMB_TRAIL (container)->priv;
 
@@ -585,7 +616,7 @@ hildon_bread_crumb_trail_init (HildonBreadCrumbTrail *bct)
 {
   HildonBreadCrumbTrailPrivate *priv = HILDON_BREAD_CRUMB_TRAIL_GET_PRIVATE (bct);
 
-  GTK_WIDGET_SET_FLAGS (bct, GTK_NO_WINDOW);
+  gtk_widget_set_has_window(GTK_WIDGET(bct), FALSE);
   gtk_widget_set_redraw_on_allocate (GTK_WIDGET (bct), FALSE);
 
   bct->priv = priv;
