@@ -113,12 +113,6 @@ hildon_color_button_get_property                (GObject *object,
                                                  GParamSpec *pspec);
 
 static void
-hildon_color_button_realize                     (GtkWidget *widget);
-
-static void
-hildon_color_button_unrealize                   (GtkWidget *widget);
-
-static void
 hildon_color_button_clicked                     (GtkButton *button);
 
 static gboolean
@@ -196,8 +190,6 @@ hildon_color_button_class_init                  (HildonColorButtonClass *klass)
     gobject_class->get_property     = hildon_color_button_get_property;
     gobject_class->set_property     = hildon_color_button_set_property;
     gobject_class->finalize         = hildon_color_button_finalize;
-    widget_class->realize           = hildon_color_button_realize;
-    widget_class->unrealize         = hildon_color_button_unrealize;
     button_class->clicked           = hildon_color_button_clicked;
     widget_class->mnemonic_activate = hildon_color_button_mnemonic_activate;
 
@@ -344,7 +336,6 @@ hildon_color_button_init                        (HildonColorButton *cb)
     HildonColorButtonPrivate *priv = HILDON_COLOR_BUTTON_GET_PRIVATE (cb);
 
     priv->dialog = NULL;
-    priv->gc = NULL;
     priv->popped = FALSE;
 
     gtk_widget_push_composite_child ();
@@ -394,31 +385,6 @@ hildon_color_button_finalize                    (GObject *object)
 
     if (G_OBJECT_CLASS (parent_class)->finalize)
         G_OBJECT_CLASS (parent_class)->finalize (object);
-}
-
-static void
-hildon_color_button_realize                     (GtkWidget *widget)
-{
-    HildonColorButtonPrivate *priv = HILDON_COLOR_BUTTON_GET_PRIVATE (widget);
-    g_assert (priv);
-
-    GTK_WIDGET_CLASS (parent_class)->realize (widget);
-
-    priv->gc =  gdk_cairo_create (gtk_widget_get_window (widget));
-}
-
-static void
-hildon_color_button_unrealize                   (GtkWidget *widget)
-{
-    HildonColorButtonPrivate *priv = HILDON_COLOR_BUTTON_GET_PRIVATE (widget);
-    g_assert (priv);
-
-    if (priv->gc != NULL) { 
-        g_object_unref (priv->gc);
-        priv->gc = NULL;
-    }
-
-    GTK_WIDGET_CLASS (parent_class)->unrealize (widget);
 }
 
 /* Make the widget sensitive with the keyboard event */
