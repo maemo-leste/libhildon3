@@ -477,7 +477,6 @@ hildon_note_init                                (HildonNote *dialog)
     g_object_ref_sink (priv->event_box);
     g_object_ref_sink (priv->label);
 
-    //gtk_dialog_set_has_separator (GTK_DIALOG (dialog), FALSE);
     gtk_window_set_modal (GTK_WINDOW (dialog), TRUE);
 
     /* We use special hint to turn the note into information notification. */
@@ -712,20 +711,18 @@ hildon_note_set_padding (HildonNote *note)
     switch (priv->note_n) {
     case HILDON_NOTE_TYPE_INFORMATION:
     case HILDON_NOTE_TYPE_INFORMATION_THEME:
-//        gtk_dialog_set_padding (GTK_DIALOG (note),
-//                                HILDON_MARGIN_DOUBLE,
-//                                HILDON_MARGIN_DOUBLE,
-//                                0,
-//                                0);
+        gtk_widget_set_margin_top(GTK_WIDGET (note), HILDON_MARGIN_DOUBLE);
+        gtk_widget_set_margin_bottom(GTK_WIDGET (note), HILDON_MARGIN_DOUBLE);
+        gtk_widget_set_margin_start(GTK_WIDGET (note), 0);
+        gtk_widget_set_margin_end(GTK_WIDGET (note), 0);
         break;
 
     case HILDON_NOTE_TYPE_CONFIRMATION:
     case HILDON_NOTE_TYPE_CONFIRMATION_BUTTON:
-//        gtk_dialog_set_padding (GTK_DIALOG (note),
-//                                HILDON_MARGIN_DOUBLE,
-//                                HILDON_MARGIN_DEFAULT,
-//                                HILDON_MARGIN_DOUBLE,
-//                                HILDON_MARGIN_DOUBLE);
+        gtk_widget_set_margin_top(GTK_WIDGET (note), HILDON_MARGIN_DOUBLE);
+        gtk_widget_set_margin_bottom(GTK_WIDGET (note), HILDON_MARGIN_DEFAULT);
+        gtk_widget_set_margin_start(GTK_WIDGET (note), HILDON_MARGIN_DOUBLE);
+        gtk_widget_set_margin_end(GTK_WIDGET (note), HILDON_MARGIN_DOUBLE);
         break;
 
     default:
@@ -780,11 +777,10 @@ hildon_note_rebuild                             (HildonNote *note)
                           &priv->button_width, NULL);
             gtk_widget_set_no_show_all (priv->cancelButton, FALSE);
 #ifdef MAEMO_GTK
-	    gtk_dialog_set_padding (dialog,
-				    HILDON_MARGIN_DOUBLE,
-				    HILDON_MARGIN_DEFAULT,
-				    HILDON_MARGIN_DOUBLE,
-				    HILDON_MARGIN_DOUBLE);
+            gtk_widget_set_margin_top(GTK_WIDGET (dialog), HILDON_MARGIN_DOUBLE);
+            gtk_widget_set_margin_bottom(GTK_WIDGET (dialog), HILDON_MARGIN_DEFAULT);
+            gtk_widget_set_margin_start(GTK_WIDGET (dialog), HILDON_MARGIN_DOUBLE);
+            gtk_widget_set_margin_end(GTK_WIDGET (dialog), HILDON_MARGIN_DOUBLE);
 #endif /* MAEMO_GTK */
             break;
 
@@ -798,11 +794,10 @@ hildon_note_rebuild                             (HildonNote *note)
         case HILDON_NOTE_TYPE_INFORMATION_THEME:
         case HILDON_NOTE_TYPE_INFORMATION:
 #ifdef MAEMO_GTK
-	    gtk_dialog_set_padding (dialog,
-				    HILDON_MARGIN_DOUBLE,
-				    HILDON_MARGIN_DOUBLE,
-				    0,
-				    0);
+            gtk_widget_set_margin_top(GTK_WIDGET (dialog), HILDON_MARGIN_DOUBLE);
+            gtk_widget_set_margin_bottom(GTK_WIDGET (dialog), HILDON_MARGIN_DOUBLE);
+            gtk_widget_set_margin_start(GTK_WIDGET (dialog), 0);
+            gtk_widget_set_margin_end(GTK_WIDGET (dialog), 0);
 #endif /* MAEMO_GTK */
             is_info_note = TRUE;
             break;
