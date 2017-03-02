@@ -99,7 +99,7 @@ START_TEST (test_set_color_regular)
   b_color->green=green;
   b_color->blue=blue;
   b_color->pixel=pixel;
-    
+
   hildon_color_button_set_color(color_button,b_color);
   hildon_color_button_get_color(color_button, ret_color);
 
@@ -343,8 +343,9 @@ START_TEST (test_set_color_invalid)
   /* Test 2: Get color from NULL object*/
   hildon_color_button_get_color(NULL, ret_color);    
    
-  /* Test 3: Set color defined by (0, 0, 0) on GtkHBox object. */
-  aux_object = gtk_hbox_new (TRUE, 0);
+  /* Test 3: Set color defined by (0, 0, 0) on GtkBox object. */
+  aux_object = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
+  gtk_box_set_homogeneous (GTK_BOX (aux_object), TRUE);
   hildon_color_button_set_color((HildonColorButton *) (aux_object), b_color);
   gdk_color_free(b_color);
 
