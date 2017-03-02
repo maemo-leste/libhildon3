@@ -572,6 +572,7 @@ hildon_banner_button_press_event                (GtkWidget* widget,
     return result;
 }
 
+#if 0
 #if defined(MAEMO_GTK)
 static void
 hildon_banner_map                               (GtkWidget *widget)
@@ -590,6 +591,7 @@ hildon_banner_map                               (GtkWidget *widget)
         gtk_window_move (GTK_WINDOW (widget), 0, HILDON_WINDOW_TITLEBAR_HEIGHT);
     }
 }
+#endif
 #endif
 
 /* We start the timer for timed notifications after the window appears on screen */
@@ -731,8 +733,10 @@ hildon_banner_class_init                        (HildonBannerClass *klass)
     widget_class->unrealize = hildon_banner_unrealize;
     widget_class->button_press_event = hildon_banner_button_press_event;
     widget_class->destroy = hildon_banner_destroy;
+#if 0
 #if defined(MAEMO_GTK)
     widget_class->map = hildon_banner_map;
+#endif
 #endif
 
     /* Install properties.
@@ -936,7 +940,6 @@ reshow_banner                                   (HildonBanner *banner)
 {
     gint width = gdk_screen_get_width (gtk_widget_get_screen (GTK_WIDGET (banner)));
     gtk_window_resize (GTK_WINDOW (banner), width, 1);
-    force_to_wrap_truncated (banner);
     gtk_widget_show_all (GTK_WIDGET (banner));
 }
 
