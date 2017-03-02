@@ -1355,7 +1355,7 @@ hildon_font_selection_dialog_new                (GtkWindow *parent,
     HildonFontSelectionDialog *fontseldiag;
 
     fontseldiag = g_object_new (HILDON_TYPE_FONT_SELECTION_DIALOG,
-            "has-separator", FALSE, NULL);
+            NULL);
 
     if (title)
         gtk_window_set_title (GTK_WINDOW (fontseldiag), title);
