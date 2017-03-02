@@ -48,6 +48,7 @@
 #undef                                          HILDON_DISABLE_DEPRECATED
 
 #include                                        "hildon-entry.h"
+#include					"hildon-enum-types.h"
 
 G_DEFINE_TYPE                                   (HildonEntry, hildon_entry, GTK_TYPE_ENTRY);
 
@@ -131,14 +132,14 @@ hildon_entry_get_text                           (HildonEntry *entry)
  *
  * Since: 2.2
  *
- * Deprecated: Use hildon_gtk_entry_set_placeholder_text() instead
+ * Deprecated: Use gtk_entry_set_placeholder_text() instead
  */
 void
 hildon_entry_set_placeholder                    (HildonEntry *entry,
                                                  const gchar *text)
 {
     g_return_if_fail (HILDON_IS_ENTRY (entry) && text != NULL);
-    hildon_gtk_entry_set_placeholder_text (GTK_ENTRY (entry), text);
+    gtk_entry_set_placeholder_text (GTK_ENTRY (entry), text);
 }
 
 /**

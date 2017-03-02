@@ -134,7 +134,7 @@ hildon_text_view_set_placeholder                (HildonTextView *text_view,
                                                  const gchar    *text)
 {
     g_return_if_fail (HILDON_IS_TEXT_VIEW (text_view) && text != NULL);
-    hildon_gtk_text_view_set_placeholder_text (GTK_TEXT_VIEW (text_view), text);
+    //hildon_gtk_text_view_set_placeholder_text (GTK_TEXT_VIEW (text_view), text);
 }
 
 /**
@@ -159,12 +159,15 @@ hildon_text_view_button_press_event             (GtkWidget        *widget,
                                                  GdkEventButton   *event)
 {
     HildonTextViewPrivate *priv = HILDON_TEXT_VIEW_GET_PRIVATE (widget);
+    GtkTextView *text_view = GTK_TEXT_VIEW (widget);
 
     gtk_widget_grab_focus (widget);
 
-    if (GTK_TEXT_VIEW (widget)->editable &&
-        hildon_gtk_im_context_filter_event (GTK_TEXT_VIEW (widget)->im_context, (GdkEvent*)event)) {
-        GTK_TEXT_VIEW (widget)->need_im_reset = TRUE;
+//    if (GTK_TEXT_VIEW (widget)->editable &&
+//        hildon_gtk_im_context_filter_event (GTK_TEXT_VIEW (widget)->im_context, (GdkEvent*)event)) {
+    if (gtk_text_view_get_editable (text_view))
+    {
+        gtk_text_view_reset_im_context (text_view);
         return TRUE;
     }
 
@@ -212,9 +215,11 @@ hildon_text_view_button_release_event           (GtkWidget        *widget,
     GtkTextIter iter;
     gint x, y;
 
-    if (text_view->editable &&
-        hildon_gtk_im_context_filter_event (text_view->im_context, (GdkEvent*)event)) {
-        text_view->need_im_reset = TRUE;
+//    if (text_view->editable &&
+//        hildon_gtk_im_context_filter_event (text_view->im_context, (GdkEvent*)event)) {
+    if (gtk_text_view_get_editable (text_view))
+    {
+        gtk_text_view_reset_im_context (text_view);
         return TRUE;
     }
 

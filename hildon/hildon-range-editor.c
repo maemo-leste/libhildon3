@@ -60,6 +60,7 @@
 #include                                        <glib/gprintf.h>
 #include                                        <gdk/gdkkeysyms.h>
 
+#include                                        "hildon-gtk.h"
 #include                                        "hildon-range-editor.h"
 #include                                        "hildon-banner.h"
 #include                                        "hildon-range-editor-private.h"
@@ -347,8 +348,15 @@ hildon_range_editor_init                        (HildonRangeEditor *editor)
     g_signal_connect (priv->end_entry, "changed", 
             G_CALLBACK (hildon_range_editor_entry_changed), editor);
 
-    gtk_entry_set_input_purpose (GTK_ENTRY (priv->start_entry), GTK_INPUT_PURPOSE_DIGITS);
+#ifdef MAEMO_GTK 
+    g_object_set (G_OBJECT (priv->start_entry),
+            "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
 
+    g_object_set( G_OBJECT (priv->end_entry),
+            "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
+#endif 
+
+    gtk_entry_set_input_purpose (GTK_ENTRY (priv->start_entry), GTK_INPUT_PURPOSE_DIGITS);
     gtk_entry_set_input_purpose (GTK_ENTRY (priv->end_entry), GTK_INPUT_PURPOSE_DIGITS);
 
     gtk_widget_show (priv->start_entry);
@@ -654,6 +662,7 @@ hildon_range_editor_destroy                     (GtkWidget *widget)
         GTK_WIDGET_CLASS (parent_class)->destroy (widget);
 }
 
+#if 0
 static void
 hildon_range_editor_get_preferred_width         (GtkWidget *widget,
                                                  gint      *minimal_width,
@@ -676,6 +685,69 @@ hildon_range_editor_get_preferred_height        (GtkWidget *widget,
   hildon_range_editor_size_request (widget, &requisition);
 
   *minimal_height = *natural_height = requisition.height;
+}
+#endif
+
+static void
+hildon_range_editor_get_preferred_width         (GtkWidget *widget,
+                                                 gint      *minimal_width,
+                                                 gint      *natural_width)
+{
+    GtkRequisition requisition;
+    HildonRangeEditorPrivate *priv = NULL;
+    GtkStyleContext *context;
+    gint xthickness, ythickness;
+    gint start_width, end_width, label_width;
+
+    priv = HILDON_RANGE_EDITOR_GET_PRIVATE (widget);
+    g_assert (priv);
+
+    gtk_entry_get_width_chars (GTK_ENTRY (priv->end_entry));
+
+    gtk_widget_get_preferred_height (priv->start_entry, &start_width, NULL);
+    gtk_widget_get_preferred_height (priv->end_entry, &end_width, NULL);
+    gtk_widget_get_preferred_height (priv->label, &label_width, NULL);
+
+    context = gtk_widget_get_style_context(widget);
+/*    gtk_style_context_get(context, gtk_style_context_get_state(context),
+                          "xthickness", &xthickness,
+                          "ythickness", &ythickness,
+                          NULL);*/
+xthickness=ythickness=1;
+
+    /* Width for entries and separator label and border */
+    *minimal_width = *natural_width = MAX (start_width, end_width) * 2 + label_width + xthickness * 2;
+}
+
+static void
+hildon_range_editor_get_preferred_height        (GtkWidget *widget,
+                                                 gint      *minimal_height,
+                                                 gint      *natural_height)
+{
+    HildonRangeEditorPrivate *priv = NULL;
+    GtkStyleContext *context;
+    gint xthickness, ythickness;
+    gint start_height, end_height, label_height;
+
+    priv = HILDON_RANGE_EDITOR_GET_PRIVATE (widget);
+    g_assert (priv);
+
+    gtk_entry_get_width_chars (GTK_ENTRY (priv->end_entry));
+
+    gtk_widget_get_preferred_height (priv->start_entry, &start_height, NULL);
+    gtk_widget_get_preferred_height (priv->end_entry, &end_height, NULL);
+    gtk_widget_get_preferred_height (priv->label, &label_height, NULL);
+
+    context = gtk_widget_get_style_context(widget);
+/*    gtk_style_context_get(context, gtk_style_context_get_state(context),
+                          "xthickness", &xthickness,
+                          "ythickness", &ythickness,
+                          NULL);*/
+xthickness=ythickness=1;
+
+    /* Add vertical border */
+    /* Fit label height */
+    *minimal_height = *natural_height = MAX ((MAX (start_height, end_height) + ythickness * 2), label_height);
 }
 
 static void

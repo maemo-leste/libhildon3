@@ -33,12 +33,6 @@ typedef enum {
 
 typedef enum
 {
-  HILDON_UI_MODE_NORMAL,
-  HILDON_UI_MODE_EDIT
-} HildonUIMode;
-
-typedef enum
-{
   HILDON_GTK_INPUT_MODE_ALPHA             = 1 << 0,
   HILDON_GTK_INPUT_MODE_NUMERIC           = 1 << 1,
   HILDON_GTK_INPUT_MODE_SPECIAL           = 1 << 2,
@@ -51,6 +45,37 @@ typedef enum
   HILDON_GTK_INPUT_MODE_AUTOCAP           = 1 << 30,
   HILDON_GTK_INPUT_MODE_DICTIONARY        = 1 << 31
 } HildonGtkInputMode;
+
+typedef enum
+{
+  HILDON_DIABLO,
+  HILDON_FREMANTLE
+} HildonMode;
+
+typedef enum
+{
+  HILDON_UI_MODE_NORMAL,
+  HILDON_UI_MODE_EDIT
+} HildonUIMode;
+
+typedef enum
+{
+  GTK_TAP_AND_HOLD_NONE         = 0,
+  GTK_TAP_AND_HOLD_PASS_PRESS   = 1 << 0,
+  GTK_TAP_AND_HOLD_NO_SIGNALS   = 1 << 1,
+  GTK_TAP_AND_HOLD_NO_INTERNALS = 1 << 2
+} GtkWidgetTapAndHoldFlags;
+
+typedef enum
+{
+  GTK_INVALID_INPUT_MAX_CHARS_REACHED,
+  GTK_INVALID_INPUT_MODE_RESTRICTION
+} GtkInvalidInputType;
+
+#define HILDON_HEIGHT_FINGER    70
+#define HILDON_HEIGHT_THUMB     105
+#define HILDON_WIDTH_FULLSCREEN (gdk_screen_get_width (gdk_screen_get_default ()))
+#define HILDON_WIDTH_HALFSCREEN (HILDON_WIDTH_FULLSCREEN / 2)
 
 GtkWidget *
 hildon_gtk_menu_new                             (void);
@@ -147,6 +172,80 @@ hildon_gtk_hscale_new                           (void);
 GtkWidget*
 hildon_gtk_vscale_new                           (void);
 
+/* GtkWindow */
+/*void
+gtk_window_set_is_temporary (GtkWindow *window,
+                             gboolean   setting);
+
+gboolean
+gtk_window_get_is_temporary (GtkWindow *window);
+
+void
+gtk_window_close_other_temporaries (GtkWindow *window);*/
+
+/* GtkEntry */
+HildonGtkInputMode
+hildon_gtk_entry_get_input_mode (GtkEntry *entry);
+
+void
+hildon_gtk_entry_set_input_mode (GtkEntry           *entry,
+                                 HildonGtkInputMode  mode);
+
+void
+hildon_gtk_entry_set_placeholder_text (GtkEntry    *entry,
+                                       const gchar *placeholder_text);
+
+const gchar *
+hildon_gtk_entry_get_placeholder_text (GtkEntry *entry);
+
+void
+hildon_gtk_entry_set_input_default (GtkEntry           *entry,
+                                    HildonGtkInputMode  mode);
+
+HildonGtkInputMode
+hildon_gtk_entry_get_input_default (GtkEntry *entry);
+
+/* GtkTreeView */
+HildonUIMode
+hildon_tree_view_get_hildon_ui_mode  (GtkTreeView *tree_view);
+
+void
+hildon_tree_view_set_hildon_ui_mode  (GtkTreeView *tree_view,
+                                      HildonUIMode mode);
+
+/* GtkTextView */
+void
+hildon_gtk_text_view_set_placeholder_text (GtkTextView *text_view,
+                                           const gchar *placeholder_text);
+
+/* GtkWidget */
+void
+hildon_gtk_widget_set_theme_size (GtkWidget      *widget,
+                                  HildonSizeType  size);
+
+/*void
+gtk_widget_tap_and_hold_setup (GtkWidget                *widget,
+                               GtkWidget                *menu,
+                               GtkCallback               func,
+                               GtkWidgetTapAndHoldFlags  flags);
+
+void
+gtk_widget_tap_and_hold_menu_position_top(GtkWidget *menu,
+                                          gint *x,
+                                          gint *y,
+                                          gboolean *push_in,
+                                          GtkWidget *widget);
+
+void
+gtk_widget_insensitive_press(GtkWidget *widget);*/
+
+/* GtkDialog */
+void
+gtk_dialog_set_padding (GtkDialog *dialog,
+                        guint top_padding,
+                        guint bottom_padding,
+                        guint left_padding,
+                        guint right_padding);
 G_END_DECLS
 
 #endif /* __HILDON_GTK_H__ */

@@ -36,7 +36,7 @@ image_visible_changed_cb                        (GtkWidget  *image,
                                                  GParamSpec *arg1,
                                                  gpointer   oldparent)
 {
-    if (!GTK_WIDGET_VISIBLE (image))
+    if (!gtk_widget_get_visible (image))
         gtk_widget_show (image);
 }
 
@@ -45,8 +45,10 @@ parent_changed_cb                               (GtkWidget  *image,
                                                  GParamSpec *arg1,
                                                  gpointer   oldparent)
 {
+    GtkWidget *parent = gtk_widget_get_parent (image);
+
     /* If the parent has really changed, remove the old signal handlers */
-    if (image->parent != oldparent) {
+    if (parent != oldparent) {
         g_signal_handlers_disconnect_by_func (image, parent_changed_cb, oldparent);
         g_signal_handlers_disconnect_by_func (image, image_visible_changed_cb, NULL);
     }
@@ -62,12 +64,14 @@ image_changed_cb                                (GtkButton  *button,
     g_return_if_fail (image == NULL || GTK_IS_WIDGET (image));
 
     if (image != NULL) {
+        GtkWidget *parent = gtk_widget_get_parent (image);
+
         /* If the button has a new image, show it */
         gtk_widget_show (image);
         /* Show the image no matter the value of gtk-button-images */
         g_signal_connect (image, "notify::visible", G_CALLBACK (image_visible_changed_cb), NULL);
         /* If the image is removed from the button, disconnect these handlers */
-        g_signal_connect (image, "notify::parent", G_CALLBACK (parent_changed_cb), image->parent);
+        g_signal_connect (image, "notify::parent", G_CALLBACK (parent_changed_cb), parent);
     }
 }
 
@@ -79,11 +83,89 @@ button_common_init                              (GtkWidget      *button,
     hildon_gtk_widget_set_theme_size (button, size);
 
     /* Set focus-on-click to FALSE by default */
+#if GTK_CHECK_VERSION (3,20,0)
+    gtk_widget_set_focus_on_click (GTK_WIDGET (button), FALSE);
+#else
     gtk_button_set_focus_on_click (GTK_BUTTON (button), FALSE);
+#endif
 
     /* Make sure that all images in this button are always shown */
     g_signal_connect (button, "notify::image", G_CALLBACK (image_changed_cb), NULL);
 }
+
+
+/**
+HILDON_GTK_INPUT_MODE_ALPHA 	alphabetical characters and whitespace
+HILDON_GTK_INPUT_MODE_NUMERIC 	numbers 0-9 and the '-' character
+HILDON_GTK_INPUT_MODE_SPECIAL 	special characters
+HILDON_GTK_INPUT_MODE_HEXA 	hexadecimal characters; numbers 0-9, characters a-f, and A-F
+HILDON_GTK_INPUT_MODE_TELE 	telephone numbers; numbers 0-9, whitespace, and the characters "pwPW/().-+*#?,"
+HILDON_GTK_INPUT_MODE_FULL 	unrestricted entry mode, combination of the alpha, numeric and special modes.
+HILDON_GTK_INPUT_MODE_MULTILINE 	the client contains multiple lines of text or accepts linebreaks in the input.
+HILDON_GTK_INPUT_MODE_INVISIBLE 	do not echo or save the input in the IM when entering sensitive information such as passwords.
+HILDON_GTK_INPUT_MODE_AUTOCAP 	automatically capitalize the first letter at the start of a sentence.
+HILDON_GTK_INPUT_MODE_DICTIONARY 	enable predictive dictionaries and learning based on the input.
+
+GTK_INPUT_HINT_NONE No special behaviour suggested
+GTK_INPUT_HINT_SPELLCHECK Suggest checking for typos
+GTK_INPUT_HINT_NO_SPELLCHECK Suggest not checking for typos
+GTK_INPUT_HINT_WORD_COMPLETION Suggest word completion
+GTK_INPUT_HINT_LOWERCASE Suggest to convert all text to lowercase
+GTK_INPUT_HINT_UPPERCASE_CHARS Suggest to capitalize all text
+GTK_INPUT_HINT_UPPERCASE_WORDS Suggest to capitalize the first character of each word
+GTK_INPUT_HINT_UPPERCASE_SENTENCES Suggest to capitalize the first word of each sentence
+
+GTK_INPUT_PURPOSE_FREE_FORM Allow any character
+GTK_INPUT_PURPOSE_ALPHA Allow only alphabetic characters
+GTK_INPUT_PURPOSE_DIGITS Allow only digits
+GTK_INPUT_PURPOSE_NUMBER Edited field expects numbers
+GTK_INPUT_PURPOSE_PHONE Edited field expects phone number
+GTK_INPUT_PURPOSE_URL Edited field expects URL
+GTK_INPUT_PURPOSE_EMAIL Edited field expects email address
+GTK_INPUT_PURPOSE_NAME Edited field expects the name of a person
+GTK_INPUT_PURPOSE_PASSWORD Like GTK_INPUT_PURPOSE_FREE_FORM , but characters are hidden
+GTK_INPUT_PURPOSE_PIN Like GTK_INPUT_PURPOSE_DIGITS , but characters are hidden
+
+*/
+void
+hildon_gtk_input_mode_to_hints_and_purpose      (HildonGtkInputMode mode,
+                                                 GtkInputHints *hints,
+                                                 GtkInputPurpose *purpose)
+{
+    if (!mode)
+        return;
+
+    if (hints)
+    {
+        if (mode & (HILDON_GTK_INPUT_MODE_AUTOCAP))
+            *hints = GTK_INPUT_HINT_UPPERCASE_SENTENCES;
+        if (mode & (HILDON_GTK_INPUT_MODE_DICTIONARY))
+            *hints |= GTK_INPUT_HINT_SPELLCHECK | GTK_INPUT_HINT_WORD_COMPLETION;
+    }
+
+    if (purpose)
+    {
+        *purpose = GTK_INPUT_PURPOSE_FREE_FORM;
+        if (mode & HILDON_GTK_INPUT_MODE_INVISIBLE)
+        {
+          if (!(mode & HILDON_GTK_INPUT_MODE_ALPHA))
+              *purpose = GTK_INPUT_PURPOSE_PIN;
+          else
+              *purpose = GTK_INPUT_PURPOSE_PASSWORD;
+        }
+        else if (mode & HILDON_GTK_INPUT_MODE_NUMERIC)
+            *purpose = GTK_INPUT_PURPOSE_NUMBER;
+        else if (mode & HILDON_GTK_INPUT_MODE_ALPHA)
+            *purpose = GTK_INPUT_PURPOSE_NUMBER;
+        else if (mode & HILDON_GTK_INPUT_MODE_TELE)
+            *purpose = GTK_INPUT_PURPOSE_PHONE;
+    }
+
+//HILDON_GTK_INPUT_MODE_SPECIAL
+//HILDON_GTK_INPUT_MODE_HEXA
+//HILDON_GTK_INPUT_MODE_FULL = GTK_INPUT_PURPOSE_FREE_FORM
+}
+
 
 /**
  * hildon_gtk_menu_new:
@@ -481,7 +563,7 @@ hildon_gtk_window_take_screenshot               (GtkWindow *window,
     XEvent xev = { 0 };
 
     g_return_if_fail (GTK_IS_WINDOW (window));
-    g_return_if_fail (GTK_WIDGET_MAPPED (window));
+    g_return_if_fail (gtk_widget_get_mapped (GTK_WIDGET (window)));
 
     xev.xclient.type = ClientMessage;
     xev.xclient.serial = 0;
@@ -491,7 +573,7 @@ hildon_gtk_window_take_screenshot               (GtkWindow *window,
     xev.xclient.message_type = XInternAtom (xev.xclient.display, "_HILDON_LOADING_SCREENSHOT", False);
     xev.xclient.format = 32;
     xev.xclient.data.l[0] = take ? 0 : 1;
-    xev.xclient.data.l[1] = GDK_WINDOW_XID (GTK_WIDGET (window)->window);
+    xev.xclient.data.l[1] = GDK_WINDOW_XID (gtk_widget_get_window (GTK_WIDGET (window)));
 
     XSendEvent (xev.xclient.display,
                 xev.xclient.window,
@@ -512,7 +594,7 @@ screenshot_done (Display *dpy, const XEvent *event, GtkWindow *window)
     && event->xclient.message_type == XInternAtom (dpy,
                                            "_HILDON_LOADING_SCREENSHOT",
                                            False)
-    && event->xclient.window == GDK_WINDOW_XID (GTK_WIDGET (window)->window);
+    && event->xclient.window == GDK_WINDOW_XID (gtk_widget_get_window (GTK_WIDGET (window)));
 }
 
 /**
@@ -531,9 +613,7 @@ hildon_gtk_window_take_screenshot_sync          (GtkWindow *window,
                                                  gboolean   take)
 {
   XEvent foo;
-  GdkWindow *win;
 
-  win = GTK_WIDGET (window)->window;
   hildon_gtk_window_take_screenshot (window, take);
   XIfEvent (GDK_DISPLAY_XDISPLAY (gtk_widget_get_display (GTK_WIDGET (window))),
             &foo, (void *)screenshot_done, (XPointer)window);
@@ -550,14 +630,14 @@ hildon_gtk_window_take_screenshot_sync          (GtkWindow *window,
  * jumps to the desired position, see gtk_range_set_jump_to_position().
  * Further more the value is not displayed, see gtk_scale_set_draw_value().
  *
- * Returns: a new hildonized #GtkHScale
+ * Returns: a new hildonized horizontally orientated #GtkScale
  *
  * Since: 2.2
  **/
 GtkWidget*
 hildon_gtk_hscale_new                           (void)
 {
-  GtkWidget *scale = gtk_hscale_new_with_range (0.0, 1.0, 0.1);
+  GtkWidget *scale = gtk_scale_new_with_range (GTK_ORIENTATION_HORIZONTAL, 0.0, 1.0, 0.1);
   g_object_set (scale,
                 "draw-value", FALSE,
 #ifdef MAEMO_GTK
@@ -586,7 +666,7 @@ hildon_gtk_hscale_new                           (void)
 GtkWidget*
 hildon_gtk_vscale_new                           (void)
 {
-  GtkWidget *scale = gtk_vscale_new_with_range (0.0, 1.0, 0.1);
+  GtkWidget *scale = gtk_scale_new_with_range (GTK_ORIENTATION_VERTICAL, 0.0, 1.0, 0.1);
   g_object_set (scale,
                 "draw-value", FALSE,
 #ifdef MAEMO_GTK

@@ -240,7 +240,6 @@ hildon_touch_selector_entry_init (HildonTouchSelectorEntry *self)
   HildonTouchSelectorEntryPrivate *priv;
   GtkEntryCompletion *completion;
   HildonGtkInputMode input_mode;
-  GtkInputPurpose input_purpose;
   GtkInputHints input_hints;
 
   priv = HILDON_TOUCH_SELECTOR_ENTRY_GET_PRIVATE (self);
@@ -249,17 +248,20 @@ hildon_touch_selector_entry_init (HildonTouchSelectorEntry *self)
 
   priv->entry = hildon_entry_new (HILDON_SIZE_FINGER_HEIGHT);
   gtk_entry_set_activates_default (GTK_ENTRY (priv->entry), TRUE);
-#if 0  
+ 
   input_mode = hildon_gtk_entry_get_input_mode (GTK_ENTRY (priv->entry));
+  input_hints = gtk_entry_get_input_hints (GTK_ENTRY (priv->entry));
 
-  /* Disable unsupported input modes. */
-  
+  /* Disable unsupported input hints. */
+
   input_mode &= ~HILDON_GTK_INPUT_MODE_MULTILINE;
   input_mode &= ~HILDON_GTK_INPUT_MODE_INVISIBLE;
   input_mode &= ~HILDON_GTK_INPUT_MODE_DICTIONARY;
+  input_hints &= ~GTK_INPUT_HINT_WORD_COMPLETION;
 
   hildon_gtk_entry_set_input_mode (GTK_ENTRY (priv->entry), input_mode);
-#endif
+  gtk_entry_set_input_purpose (GTK_ENTRY (priv->entry), GTK_INPUT_PURPOSE_FREE_FORM);
+  gtk_entry_set_input_hints (GTK_ENTRY (priv->entry), input_hints);
 
   completion = gtk_entry_completion_new ();
   gtk_entry_completion_set_inline_completion (completion, TRUE);

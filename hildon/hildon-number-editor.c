@@ -59,6 +59,7 @@
 #include                                        <libintl.h>
 #include                                        <gdk/gdkkeysyms.h>
 
+#include                                        "hildon-gtk.h"
 #include                                        "hildon-number-editor.h"
 #include                                        "hildon-marshalers.h"
 #include                                        "hildon-defines.h"
@@ -431,6 +432,10 @@ hildon_number_editor_init                       (HildonNumberEditor *editor)
             G_CALLBACK (hildon_number_editor_button_released),
             editor);
 
+#ifdef MAEMO_GTK 
+    g_object_set (G_OBJECT (priv->num_entry),
+            "hildon-input-mode", HILDON_GTK_INPUT_MODE_NUMERIC, NULL);
+#endif
     gtk_entry_set_input_purpose (GTK_ENTRY (priv->num_entry), GTK_INPUT_PURPOSE_DIGITS);
 
     gtk_widget_show (priv->num_entry);
@@ -776,10 +781,12 @@ hildon_number_editor_size_allocate              (GtkWidget *widget,
 
     gtk_widget_set_allocation (widget, allocation);
     context = gtk_widget_get_style_context(widget);
-    gtk_style_context_get(context, gtk_style_context_get_state(context),
-                          "xthickness", &xthickness,
-                          "ythickness", &ythickness,
-                          NULL);
+//    gtk_style_context_get(context, gtk_style_context_get_state(context),
+//                          "border-width", &xthickness,
+//                          "border-width", &ythickness,
+//                          NULL);
+//FIXME nothing renders if using above
+    xthickness=ythickness=1;
 
     /* Add upper border */
     alloc.y = allocation->y + ythickness;
