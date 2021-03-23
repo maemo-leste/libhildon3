@@ -202,8 +202,7 @@ AM_CONDITIONAL([HILDON_DISABLE_DEPRECATED], test "x$enable_deprecated" = "xno")
 PKG_CHECK_MODULES(CHECK, check , [BUILD_TESTS="yes"], [BUILD_TESTS="no"])
 AM_CONDITIONAL(BUILD_TESTS, test "x$BUILD_TESTS" = "xyes")
 
-CFLAGS="$CFLAGS ${ASSERT_CFLAGS} ${DEBUG_CFLAGS} -Wall -Wmissing-prototypes -Wmissing-declarations -Wno-format ${FATAL_CFLAGS}"
-# -Wno-format due to way translation string are done
+CFLAGS="$CFLAGS ${ASSERT_CFLAGS} ${DEBUG_CFLAGS} -Wall -Wmissing-prototypes -Wmissing-declarations ${FATAL_CFLAGS}"
 
 ### disable deprecated symbols and enable MAEMO platform extensions
 EXTRA_CFLAGS="$DISABLE_DEPRECATED $MAEMO_CHANGES $MAEMO_GTK"
