@@ -12,4 +12,5 @@ override_dh_autoreconf:
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		--enable-maintainer-mode \
-		--enable-gtk-doc
+		--enable-gtk-doc \
+		--disable-fatal
